@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.system.mapper.AiGenerateHistoryMapper">
+
+    <insert id="insert" parameterType="AiGenerateHistory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_generate_history (
+            user_id, bank_id, session_id, request_type, question_type,
+            knowledge_point, request_count, generated_count, provider, create_time
+        ) VALUES (
+                     #{userId}, #{bankId}, #{sessionId}, #{requestType}, #{questionType},
+                     #{knowledgePoint}, #{requestCount}, #{generatedCount}, #{provider}, NOW()
+                 )
+    </insert>
+
+    <insert id="batchInsert">
+        INSERT INTO ai_generate_history (
+        user_id, bank_id, session_id, request_type, question_type,
+        knowledge_point, request_count, generated_count, provider, create_time
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.userId}, #{item.bankId}, #{item.sessionId}, #{item.requestType}, #{item.questionType},
+            #{item.knowledgePoint}, #{item.requestCount}, #{item.generatedCount}, #{item.provider}, NOW()
+            )
+        </foreach>
+    </insert>
+
+    <select id="selectByUserId" resultType="AiGenerateHistory">
+        SELECT * FROM ai_generate_history WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.sensitiveWord.mapper.SysSensitiveWordMapper">
+    
+    <resultMap type="SysSensitiveWord" id="SysSensitiveWordResult">
+        <result property="id"    column="id"    />
+        <result property="word"    column="word"    />
+        <result property="category"    column="category"    />
+        <result property="status"    column="status"    />
+        <result property="remark"    column="remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectSysSensitiveWordVo">
+        select id, word, category, status, remark, create_by, create_time, update_by, update_time from sys_sensitive_word
+    </sql>
+
+    <select id="selectSysSensitiveWordList" parameterType="SysSensitiveWord" resultMap="SysSensitiveWordResult">
+        <include refid="selectSysSensitiveWordVo"/>
+        <where>  
+            <if test="word != null  and word != ''"> and word = #{word}</if>
+            <if test="category != null  and category != ''"> and category = #{category}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectSysSensitiveWordById" parameterType="Long" resultMap="SysSensitiveWordResult">
+        <include refid="selectSysSensitiveWordVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertSysSensitiveWord" parameterType="SysSensitiveWord" useGeneratedKeys="true" keyProperty="id">
+        insert into sys_sensitive_word
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="word != null and word != ''">word,</if>
+            <if test="category != null">category,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="word != null and word != ''">#{word},</if>
+            <if test="category != null">#{category},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateSysSensitiveWord" parameterType="SysSensitiveWord">
+        update sys_sensitive_word
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="word != null and word != ''">word = #{word},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteSysSensitiveWordById" parameterType="Long">
+        delete from sys_sensitive_word where id = #{id}
+    </delete>
+
+    <delete id="deleteSysSensitiveWordByIds" parameterType="String">
+        delete from sys_sensitive_word where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

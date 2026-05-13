@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.questionMarked.mapper.UserQuestionMarkedMapper">
+    
+    <resultMap type="UserQuestionMarked" id="UserQuestionMarkedResult">
+        <result property="markedId"    column="marked_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="questionId"    column="question_id"    />
+        <result property="bankId"    column="bank_id"    />
+        <result property="notes"    column="notes"    />
+        <result property="tags"    column="tags"    />
+        <result property="markedType"    column="marked_type"    />
+        <result property="difficultyLevel"    column="difficulty_level"    />
+        <result property="errorTimesBeforeMark"    column="error_times_before_mark"    />
+        <result property="correctTimesBeforeMark"    column="correct_times_before_mark"    />
+        <result property="reviewCount"    column="review_count"    />
+        <result property="lastReviewTime"    column="last_review_time"    />
+        <result property="nextReviewTime"    column="next_review_time"    />
+        <result property="isMastered"    column="is_mastered"    />
+        <result property="masteryDate"    column="mastery_date"    />
+        <result property="markedStatus"    column="marked_status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectUserQuestionMarkedVo">
+        select marked_id, user_id, question_id, bank_id, notes, tags, marked_type, difficulty_level, error_times_before_mark, correct_times_before_mark, review_count, last_review_time, next_review_time, is_mastered, mastery_date, marked_status, create_time, update_time from user_question_marked
+    </sql>
+
+    <select id="selectUserQuestionMarkedList" parameterType="UserQuestionMarked" resultMap="UserQuestionMarkedResult">
+        <include refid="selectUserQuestionMarkedVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="questionId != null "> and question_id = #{questionId}</if>
+            <if test="bankId != null "> and bank_id = #{bankId}</if>
+            <if test="notes != null  and notes != ''"> and notes = #{notes}</if>
+            <if test="tags != null  and tags != ''"> and tags = #{tags}</if>
+            <if test="markedType != null "> and marked_type = #{markedType}</if>
+            <if test="difficultyLevel != null "> and difficulty_level = #{difficultyLevel}</if>
+            <if test="errorTimesBeforeMark != null "> and error_times_before_mark = #{errorTimesBeforeMark}</if>
+            <if test="correctTimesBeforeMark != null "> and correct_times_before_mark = #{correctTimesBeforeMark}</if>
+            <if test="reviewCount != null "> and review_count = #{reviewCount}</if>
+            <if test="lastReviewTime != null "> and last_review_time = #{lastReviewTime}</if>
+            <if test="nextReviewTime != null "> and next_review_time = #{nextReviewTime}</if>
+            <if test="isMastered != null "> and is_mastered = #{isMastered}</if>
+            <if test="masteryDate != null "> and mastery_date = #{masteryDate}</if>
+            <if test="markedStatus != null "> and marked_status = #{markedStatus}</if>
+        </where>
+    </select>
+    
+    <select id="selectUserQuestionMarkedByMarkedId" parameterType="Long" resultMap="UserQuestionMarkedResult">
+        <include refid="selectUserQuestionMarkedVo"/>
+        where marked_id = #{markedId}
+    </select>
+
+    <insert id="insertUserQuestionMarked" parameterType="UserQuestionMarked" useGeneratedKeys="true" keyProperty="markedId">
+        insert into user_question_marked
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="questionId != null">question_id,</if>
+            <if test="bankId != null">bank_id,</if>
+            <if test="notes != null">notes,</if>
+            <if test="tags != null">tags,</if>
+            <if test="markedType != null">marked_type,</if>
+            <if test="difficultyLevel != null">difficulty_level,</if>
+            <if test="errorTimesBeforeMark != null">error_times_before_mark,</if>
+            <if test="correctTimesBeforeMark != null">correct_times_before_mark,</if>
+            <if test="reviewCount != null">review_count,</if>
+            <if test="lastReviewTime != null">last_review_time,</if>
+            <if test="nextReviewTime != null">next_review_time,</if>
+            <if test="isMastered != null">is_mastered,</if>
+            <if test="masteryDate != null">mastery_date,</if>
+            <if test="markedStatus != null">marked_status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="questionId != null">#{questionId},</if>
+            <if test="bankId != null">#{bankId},</if>
+            <if test="notes != null">#{notes},</if>
+            <if test="tags != null">#{tags},</if>
+            <if test="markedType != null">#{markedType},</if>
+            <if test="difficultyLevel != null">#{difficultyLevel},</if>
+            <if test="errorTimesBeforeMark != null">#{errorTimesBeforeMark},</if>
+            <if test="correctTimesBeforeMark != null">#{correctTimesBeforeMark},</if>
+            <if test="reviewCount != null">#{reviewCount},</if>
+            <if test="lastReviewTime != null">#{lastReviewTime},</if>
+            <if test="nextReviewTime != null">#{nextReviewTime},</if>
+            <if test="isMastered != null">#{isMastered},</if>
+            <if test="masteryDate != null">#{masteryDate},</if>
+            <if test="markedStatus != null">#{markedStatus},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateUserQuestionMarked" parameterType="UserQuestionMarked">
+        update user_question_marked
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="questionId != null">question_id = #{questionId},</if>
+            <if test="bankId != null">bank_id = #{bankId},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="markedType != null">marked_type = #{markedType},</if>
+            <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
+            <if test="errorTimesBeforeMark != null">error_times_before_mark = #{errorTimesBeforeMark},</if>
+            <if test="correctTimesBeforeMark != null">correct_times_before_mark = #{correctTimesBeforeMark},</if>
+            <if test="reviewCount != null">review_count = #{reviewCount},</if>
+            <if test="lastReviewTime != null">last_review_time = #{lastReviewTime},</if>
+            <if test="nextReviewTime != null">next_review_time = #{nextReviewTime},</if>
+            <if test="isMastered != null">is_mastered = #{isMastered},</if>
+            <if test="masteryDate != null">mastery_date = #{masteryDate},</if>
+            <if test="markedStatus != null">marked_status = #{markedStatus},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where marked_id = #{markedId}
+    </update>
+
+    <delete id="deleteUserQuestionMarkedByMarkedId" parameterType="Long">
+        delete from user_question_marked where marked_id = #{markedId}
+    </delete>
+
+    <delete id="deleteUserQuestionMarkedByMarkedIds" parameterType="String">
+        delete from user_question_marked where marked_id in 
+        <foreach item="markedId" collection="array" open="(" separator="," close=")">
+            #{markedId}
+        </foreach>
+    </delete>
+
+    <!-- 检查题目是否存在 -->
+    <select id="checkQuestionExists" parameterType="Long" resultType="int">
+        select count(1) from question_main
+        where id = #{questionId} and status = '0'
+    </select>
+
+    <!-- 检查是否已斩题 -->
+    <select id="checkMarkedExists" resultType="int">
+        select count(1) from user_question_marked
+        where user_id = #{userId}
+        and question_id = #{questionId}
+        and marked_status = 1
+        <if test="excludeMarkedId != null">
+            and marked_id != #{excludeMarkedId}
+        </if>
+    </select>
+</mapper>

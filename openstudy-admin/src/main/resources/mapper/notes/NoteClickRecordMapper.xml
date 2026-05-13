@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.notes.mapper.NoteClickRecordMapper">
+
+    <insert id="insert" parameterType="NoteClickRecord">
+        INSERT IGNORE INTO note_click_record (note_id, user_id)
+        VALUES (#{noteId}, #{userId})
+    </insert>
+
+</mapper>

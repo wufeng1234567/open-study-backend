@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.wordBooks.mapper.WordBooksMapper">
+
+    <resultMap type="WordBooks" id="WordBooksResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />   <!-- 新增 -->
+        <result property="name"    column="name"    />
+        <result property="description"    column="description"    />
+        <result property="createdTime"    column="created_time"    />
+        <result property="updatedTime"    column="updated_time"    />
+        <result property="isDefault"    column="is_default"    />
+        <result property="isDeleted"    column="is_deleted"    />
+        <result property="deletedTime"    column="deleted_time"    />
+    </resultMap>
+
+    <sql id="selectWordBooksVo">
+        select id, user_id, name, description, created_time, updated_time, is_default, is_deleted, deleted_time from word_books
+    </sql>
+
+    <select id="selectWordBooksList" parameterType="WordBooks" resultMap="WordBooksResult">
+        <include refid="selectWordBooksVo"/>
+        <where>
+            <if test="userId != null"> and user_id = #{userId}</if>   <!-- 新增 -->
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+            <if test="description != null  and description != ''"> and description like concat('%', #{description}, '%')</if>
+        </where>
+    </select>
+
+
+    <!-- 前台专用：查询用户可见的词库 -->
+    <select id="selectFrontWordBooksList" parameterType="WordBooks" resultMap="WordBooksResult">
+        <include refid="selectWordBooksVo"/>
+        <where>
+            <if test="userId != null">
+                AND (user_id = #{userId} OR is_default = 1)
+            </if>
+            <if test="name != null  and name != ''">
+                AND name like concat('%', #{name}, '%')
+            </if>
+            <if test="description != null  and description != ''">
+                AND description like concat('%', #{description}, '%')
+            </if>
+            AND is_deleted = 0
+        </where>
+        ORDER BY is_default DESC, created_time DESC
+    </select>
+
+    <select id="selectWordBooksById" parameterType="Long" resultMap="WordBooksResult">
+        <include refid="selectWordBooksVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertWordBooks" parameterType="WordBooks" useGeneratedKeys="true" keyProperty="id">
+        insert into word_books
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>   <!-- 新增 -->
+            <if test="name != null and name != ''">name,</if>
+            <if test="description != null">description,</if>
+            <if test="createdTime != null">created_time,</if>
+            <if test="updatedTime != null">updated_time,</if>
+            <if test="isDefault != null">is_default,</if>
+            <if test="isDeleted != null">is_deleted,</if>
+            <if test="deletedTime != null">deleted_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>   <!-- 新增 -->
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="description != null">#{description},</if>
+            <if test="createdTime != null">#{createdTime},</if>
+            <if test="updatedTime != null">#{updatedTime},</if>
+            <if test="isDefault != null">#{isDefault},</if>
+            <if test="isDeleted != null">#{isDeleted},</if>
+            <if test="deletedTime != null">#{deletedTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateWordBooks" parameterType="WordBooks">
+        update word_books
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>   <!-- 新增 -->
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="createdTime != null">created_time = #{createdTime},</if>
+            <if test="updatedTime != null">updated_time = #{updatedTime},</if>
+            <if test="isDefault != null">is_default = #{isDefault},</if>
+            <if test="isDeleted != null">is_deleted = #{isDeleted},</if>
+            <if test="deletedTime != null">deleted_time = #{deletedTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteWordBooksById" parameterType="Long">
+        delete from word_books where id = #{id}
+    </delete>
+
+    <delete id="deleteWordBooksByIds" parameterType="String">
+        delete from word_books where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,210 @@
+**前端提示词：**
+```text
+你是 Trae AI 编程助手，请帮我实现笔记分享模块的评论功能。
+
+## 项目背景
+笔记分享模块已有：列表页(list.vue)、详情页(detail.vue)、编辑器(editor.vue)。
+所有页面使用白底灰边框风格，按钮为白底灰边框+8px圆角+hover蓝边框上浮效果，弹窗为16px圆角白底。
+请保持所有新增组件的样式和现有页面完全一致。
+
+## 一、新建文件
+
+### 1. src/api/comment.js
+评论接口封装：
+- listComments(noteId, pageNum, pageSize)：查询一级评论分页，GET /notes/comment/list
+- listReplies(commentId, pageNum, pageSize)：查询子回复分页，GET /notes/comment/replies
+- getCommentThread(commentId)：查询某条评论的完整对话树，GET /notes/comment/thread/{id}
+- createComment(data)：发表评论/回复，POST /notes/comment/create，参数：noteId, parentId, replyToUserId, replyToUserName, content
+- deleteComment(id)：删除评论，DELETE /notes/comment/delete/{id}
+
+### 2. src/store/modules/commentCache.js
+Pinia 缓存评论区的浏览状态：
+- currentPage：当前页码（默认1）
+- expandedThreads：Set类型，记录哪些评论展开了全部子回复
+- replyTarget：正在回复的目标评论信息 {id, userName}
+- 切换笔记时自动清空缓存（watch noteId）
+- 关闭模态框时保留缓存，下次打开恢复
+
+### 3. src/components/CommentSection/ 目录
+
+#### CommentSection.vue（入口组件，嵌入 detail.vue 底部）
+功能：
+- 显示最新 3 条一级评论预览（每条只显示第一条子回复，如果有）
+- 底部显示"📝 写评论"输入框 + "查看全部 N 条评论"按钮
+- 点击"查看全部"打开全屏模态框 CommentModal
+- 点击"写评论"聚焦输入框，发表一级评论
+- 发表成功后刷新预览列表
+
+样式：
+- 卡片白底、16px圆角、1px solid #e5e7eb
+- 预览区单条评论：左侧小头像(32px圆形) + 用户名(加粗) + 时间(灰色小字) + 内容
+- 子回复缩进16px，加左边框标识
+- 输入框：8px圆角、灰边框、聚焦蓝边框
+- 按钮：白底灰边框、8px圆角、hover蓝边框上浮2px
+
+#### CommentModal.vue（全屏模态框评论区）
+功能：
+- 全屏覆盖，z-index 2000，顶部固定工具栏（圆角16px白底卡片内）
+- 工具栏：左侧"💬 全部评论 (N)"标题，右侧关闭按钮
+- 一级评论列表，每页 10 条，底部 el-pagination 分页器
+- 每条评论渲染用 CommentItem 组件
+- 底部固定输入框，支持"回复 @用户名"模式（点击某条评论的回复后自动设置）
+- 缓存：页码、展开状态、回复目标都存到 commentCache store
+- 关闭模态框保留缓存，切换笔记清空缓存
+- 发表评论后自动跳到第1页（因为新评论在最上面）
+
+样式：
+- 覆盖层：fixed全屏、浅灰背景 #f5f7fa
+- 内容区：max-width 800px、居中、overflow-y auto
+- 评论卡片：白底、16px圆角、1px solid #e5e7eb、padding 16px、margin-bottom 12px
+- 分页器：居中显示，按钮圆角6px
+- 关闭按钮：工具栏右侧、圆形、hover变灰
+- 所有按钮白底灰边框风格
+
+#### CommentItem.vue（单条评论，递归组件）
+Props：
+- comment：评论对象
+- depth：嵌套深度（0=一级，1=子回复，2=孙回复...，最大3层，超过3层不再缩进）
+- isPreview：是否预览模式（预览模式不显示"查看对话"按钮）
+
+功能：
+- 显示头像(40px圆形)、用户名、时间（格式：刚刚/X分钟前/X小时前/X天前/日期）
+- 如果是回复某人，显示"→ @用户名"的回复标识
+- 评论内容纯文本展示（不做 markdown 渲染）
+- 操作按钮：[回复]（所有人可见）、[查看对话]（仅一级评论、非预览模式）、[删除]（仅自己的评论）
+- 子回复区域：
+  - 默认显示前 3 条
+  - 超过 3 条时显示"展开剩余 N 条回复"按钮（灰底灰字、小号）
+  - 点击展开后显示全部，按钮变为"收起"
+- 嵌套缩进：每层缩进 24px + 左边框 2px solid #e5e7eb
+- 递归渲染子回复：depth < 3 时继续递归，depth >= 3 时不再嵌套
+
+样式：
+- 头像：圆角50%、object-fit cover
+- 用户名：font-weight 600、color #1f2937
+- 时间：font-size 12px、color #9ca3af
+- 回复标识：font-size 12px、color #6b7280
+- 内容：font-size 14px、line-height 1.6、color #374151
+- 操作按钮：font-size 12px、padding 2px 8px、白底透明边框、hover 蓝字
+- 子回复区域：margin-top 8px、padding-left 24px、border-left 2px solid #e5e7eb
+
+#### CommentInput.vue（评论输入框）
+Props：
+- replyTarget：回复目标 {id, userName}，null 表示发表一级评论
+- placeholder：占位文字
+- submitText：按钮文字（默认"发表"）
+
+功能：
+- textarea 输入框，3行，8px圆角、灰边框
+- 如果 replyTarget 不为空，显示"回复 @用户名"标签（可点击取消回复）
+- Ctrl+Enter 快捷发送
+- 发表按钮：白底灰边框，hover 蓝边框
+- 发表中按钮 loading 状态
+- 发表成功后清空输入框，emit submit 事件给父组件
+
+样式：
+- 容器：白底、padding 12px、border-top 1px solid #e5e7eb
+- 输入框：和现有 qa.vue 的 question-input 样式一致
+- 回复标签：el-tag、closable、size small、圆角4px
+- 按钮：和其他页面白底灰边框按钮一致
+
+## 二、修改现有文件
+
+### detail.vue
+在内容卡片下方（content-card 的 navigation 之前或之后），引入 CommentSection 组件：
+```
+<CommentSection :note-id="noteData.id" :note-user-id="noteData.userId" />
+```
+
+CommentSection 放在 content-card 内部，meta-info/markdown-content 之后，navigation 之前。
+
+## 三、样式总规范
+- 所有按钮：background #fff, border 1px solid #e5e7eb, color #6b7280, border-radius 8px, hover 蓝边框上浮2px
+- 所有输入框：border-radius 8px, border 1px solid #e5e7eb, hover border-color #d1d5db, focus border-color #409eff
+- 卡片：border-radius 16px, background #fff, border 1px solid #e5e7eb, box-shadow 0 2px 8px rgba(0,0,0,0.04)
+- 弹窗：border-radius 16px
+- 字体颜色：#1f2937(标题) / #374151(正文) / #6b7280(次要) / #9ca3af(辅助)
+- 不使用任何蓝底白字按钮
+- hover 动画：transform translateY(-2px) + 阴影加深
+```
+
+---
+
+**后端提示词：**
+```text
+你是 IDEA AI 编程助手，请帮我实现笔记评论功能的后端接口。
+
+## 一、数据库表结构
+你需要自行创建表，参考以下结构：
+- 表名：note_comment
+- 字段：id(BIGINT), note_id(BIGINT), parent_id(BIGINT NULL), reply_to_user_id(BIGINT NULL), reply_to_user_name(VARCHAR 100 NULL), user_id(BIGINT), user_name(VARCHAR 100), avatar(VARCHAR 255), content(TEXT), status(TINYINT DEFAULT 1), create_time(DATETIME)
+- 索引：idx_note_id ON (note_id), idx_parent_id ON (parent_id)
+
+【重要提醒】：SQL 由我本人执行，你只需要在回答中给出 CREATE TABLE 语句供我复制使用，不要尝试执行。
+
+## 二、新建文件
+
+### 1. 实体类 NoteComment.java
+位置：com.openstudy.notes.domain
+字段对应上述表结构，使用 Lombok @Data，继承 BaseEntity。
+
+### 2. Mapper 接口 NoteCommentMapper.java
+位置：com.openstudy.notes.mapper
+方法：
+- List<NoteComment> selectCommentList(NoteComment comment)：分页查询一级评论（parentId IS NULL），支持 pageNum/pageSize 分页
+- List<NoteComment> selectReplies(Long parentId)：查询某条评论的子回复（按 createTime ASC），不分页
+- int insertComment(NoteComment comment)：插入评论
+- int deleteById(Long id, Long userId)：删除（status=0），必须校验 userId
+- int countByNoteId(Long noteId)：统计笔记的评论总数
+- int countReplies(Long parentId)：统计某条评论的子回复总数
+
+### 3. Mapper XML NoteCommentMapper.xml
+位置：对应 mapper 目录
+- 查询时 LEFT JOIN sys_user 获取头像（u.avatar）
+- 查询一级评论时返回每个评论的 replyCount（子回复数量）作为额外字段
+- 分页使用 PageHelper
+
+### 4. Service 接口 INoteCommentService
+方法签名同 Mapper，insert 方法需要校验笔记是否存在、内容不为空、长度限制 500 字。
+
+### 5. Service 实现 NoteCommentServiceImpl
+实现上述接口，注入 NoteCommentMapper 和 NoteMapper（用于校验笔记是否存在）。
+
+### 6. Controller NoteCommentController.java
+位置：com.openstudy.notes.controller
+路径：/notes/comment
+
+接口：
+
+GET /list：查询一级评论分页
+- 参数：noteId(必填), pageNum(默认1), pageSize(默认10)
+- 返回：分页数据 rows + total，每个 row 包含 replyCount 字段
+
+GET /replies：查询子回复
+- 参数：parentId(必填), pageNum(默认1), pageSize(默认5)
+- 返回：分页数据
+
+GET /thread/{commentId}：查询完整对话树
+- 返回该条评论 + 递归查询所有子孙回复，组装成树形结构
+- 查询所有子孙回复（status=1），在内存中组装成树
+
+POST /create：发表评论/回复
+- 参数：noteId(必填), content(必填/500字限制), parentId(可选), replyToUserId(可选), replyToUserName(可选)
+- userId 和 userName 从 SecurityUtils.getUserId() 获取
+- 校验笔记存在，内容去除首尾空格后不能为空
+- 如果 parentId 不为空，校验父评论存在且属于同一笔记
+
+DELETE /delete/{id}：删除自己的评论
+- 校验 userId，只能删自己的
+- 软删除（status=0），子回复保留
+
+## 三、注意事项
+- 所有接口需登录（复用现有 JWT 认证）
+- 返回格式：AjaxResult（code + msg + data）
+- 分页用 PageHelper（项目已集成）
+- 不要修改任何已有的 SQL 文件和 mapper.xml，只新建文件
+```
+
+---
+
+这两个提示词可以直接复制给前后端 AI 使用。

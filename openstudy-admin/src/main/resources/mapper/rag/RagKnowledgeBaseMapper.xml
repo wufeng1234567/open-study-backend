@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.ai.mapper.RagKnowledgeBaseMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rag_knowledge_base (user_id, name, description, icon, is_public)
+        VALUES (#{userId}, #{name}, #{description}, #{icon}, #{isPublic})
+    </insert>
+
+    <select id="selectById" resultType="com.openstudy.ai.domain.RagKnowledgeBase">
+        SELECT * FROM rag_knowledge_base WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultType="com.openstudy.ai.domain.RagKnowledgeBase">
+        SELECT * FROM rag_knowledge_base WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="update">
+        UPDATE rag_knowledge_base
+        SET name = #{name}, description = #{description},
+            document_count = #{documentCount}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM rag_knowledge_base WHERE id = #{id}
+    </delete>
+
+    <update id="incrementDocumentCount">
+        UPDATE rag_knowledge_base 
+        SET document_count = COALESCE(document_count, 0) + #{delta}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>

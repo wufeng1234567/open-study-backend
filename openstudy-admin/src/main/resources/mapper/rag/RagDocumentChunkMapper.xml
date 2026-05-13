@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.ai.mapper.RagDocumentChunkMapper">
+    
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rag_document_chunk (document_id, chunk_index, content, 
+            content_length, vector_id)
+        VALUES (#{documentId}, #{chunkIndex}, #{content}, 
+            #{contentLength}, #{vectorId})
+    </insert>
+    
+    <insert id="batchInsert">
+        INSERT INTO rag_document_chunk (document_id, chunk_index, content, 
+            content_length, vector_id)
+        VALUES
+        <foreach collection="list" item="chunk" separator=",">
+            (#{chunk.documentId}, #{chunk.chunkIndex}, #{chunk.content}, 
+            #{chunk.contentLength}, #{chunk.vectorId})
+        </foreach>
+    </insert>
+    
+    <select id="selectByDocumentId" resultType="com.openstudy.ai.domain.RagDocumentChunk">
+        SELECT * FROM rag_document_chunk WHERE document_id = #{documentId}
+        ORDER BY chunk_index ASC
+    </select>
+    
+    <select id="selectByVectorId" resultType="com.openstudy.ai.domain.RagDocumentChunk">
+        SELECT * FROM rag_document_chunk WHERE vector_id = #{vectorId}
+    </select>
+    
+    <delete id="deleteByDocumentId">
+        DELETE FROM rag_document_chunk WHERE document_id = #{documentId}
+    </delete>
+    
+    <select id="selectByVectorIds" resultType="com.openstudy.ai.domain.RagDocumentChunk">
+        SELECT * FROM rag_document_chunk WHERE vector_id IN
+        <foreach collection="vectorIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    
+</mapper>

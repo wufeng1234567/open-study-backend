@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.words.mapper.WordsMapper">
+
+    <resultMap type="Words" id="WordsResult">
+        <result property="id" column="id"/>
+        <result property="english" column="english"/>
+        <result property="wordType" column="word_type"/>
+        <result property="chinese" column="chinese"/>
+        <result property="phonetic" column="phonetic"/>
+        <result property="isMastered" column="is_mastered"/>
+        <result property="reviewCount" column="review_count"/>
+        <result property="lastReviewTime" column="last_review_time"/>
+        <result property="wordBookId" column="word_book_id"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="deletedTime" column="deleted_time"/>
+        <result property="wordBookName" column="word_book_name"/>
+    </resultMap>
+
+    <sql id="selectWordsVo">
+        SELECT
+            w.id,
+            w.english,
+            w.word_type,
+            w.chinese,
+            w.phonetic,
+            w.is_mastered,
+            w.review_count,
+            w.last_review_time,
+            w.word_book_id,
+            w.created_time,
+            w.updated_time,
+            w.is_deleted,
+            w.deleted_time,
+            wb.name AS word_book_name
+        FROM words w
+                 LEFT JOIN word_books wb ON w.word_book_id = wb.id
+    </sql>
+    <select id="selectWordsList" parameterType="Words" resultMap="WordsResult">
+        <include refid="selectWordsVo"/>
+        <where>  
+            <if test="english != null  and english != ''"> and english like concat('%', #{english}, '%')</if>
+            <if test="chinese != null  and chinese != ''"> and chinese like concat('%', #{chinese}, '%')</if>
+            <if test="wordBookId != null"> and w.word_book_id = #{wordBookId}</if>
+        </where>
+    </select>
+
+
+
+    <select id="selectWordsById" parameterType="Long" resultMap="WordsResult">
+        SELECT
+            w.id,
+            w.english,
+            w.chinese,
+            w.phonetic,
+            w.word_book_id,
+            w.created_time,
+            w.updated_time,
+            w.is_deleted,
+            w.deleted_time,
+            wb.name AS word_book_name
+        FROM words w
+                 LEFT JOIN word_books wb ON w.word_book_id = wb.id
+        WHERE w.id = #{id}
+    </select>
+
+    <insert id="insertWords" parameterType="Words" useGeneratedKeys="true" keyProperty="id">
+        insert into words
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="english != null and english != ''">english,</if>
+            <if test="wordType != null">word_type,</if>
+            <if test="chinese != null and chinese != ''">chinese,</if>
+            <if test="phonetic != null">phonetic,</if>
+            <if test="isMastered != null">is_mastered,</if>
+            <if test="reviewCount != null">review_count,</if>
+            <if test="lastReviewTime != null">last_review_time,</if>
+            <if test="wordBookId != null">word_book_id,</if>
+            <if test="createdTime != null">created_time,</if>
+            <if test="updatedTime != null">updated_time,</if>
+            <if test="isDeleted != null">is_deleted,</if>
+            <if test="deletedTime != null">deleted_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="english != null and english != ''">#{english},</if>
+            <if test="wordType != null">#{wordType},</if>
+            <if test="chinese != null and chinese != ''">#{chinese},</if>
+            <if test="phonetic != null">#{phonetic},</if>
+            <if test="isMastered != null">#{isMastered},</if>
+            <if test="reviewCount != null">#{reviewCount},</if>
+            <if test="lastReviewTime != null">#{lastReviewTime},</if>
+            <if test="wordBookId != null">#{wordBookId},</if>
+            <if test="createdTime != null">#{createdTime},</if>
+            <if test="updatedTime != null">#{updatedTime},</if>
+            <if test="isDeleted != null">#{isDeleted},</if>
+            <if test="deletedTime != null">#{deletedTime},</if>
+        </trim>
+    </insert>
+    <update id="updateWords" parameterType="Words">
+        update words
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="english != null and english != ''">english = #{english},</if>
+            <if test="wordType != null">word_type = #{wordType},</if>
+            <if test="chinese != null and chinese != ''">chinese = #{chinese},</if>
+            <if test="phonetic != null">phonetic = #{phonetic},</if>
+            <if test="isMastered != null">is_mastered = #{isMastered},</if>
+            <if test="reviewCount != null">review_count = #{reviewCount},</if>
+            <if test="lastReviewTime != null">last_review_time = #{lastReviewTime},</if>
+            <if test="wordBookId != null">word_book_id = #{wordBookId},</if>
+            <if test="createdTime != null">created_time = #{createdTime},</if>
+            <if test="updatedTime != null">updated_time = #{updatedTime},</if>
+            <if test="isDeleted != null">is_deleted = #{isDeleted},</if>
+            <if test="deletedTime != null">deleted_time = #{deletedTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+    <delete id="deleteWordsById" parameterType="Long">
+        delete from words where id = #{id}
+    </delete>
+
+    <delete id="deleteWordsByIds" parameterType="String">
+        delete from words where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

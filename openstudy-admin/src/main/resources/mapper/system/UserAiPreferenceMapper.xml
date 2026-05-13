@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.system.mapper.UserAiPreferenceMapper">
+
+    <select id="selectByUserId" resultType="UserAiPreference">
+        SELECT * FROM user_ai_preference WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="UserAiPreference" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_ai_preference (
+            user_id, prefer_subject, prefer_question_types, prefer_difficulty,
+            prefer_options_count, prefer_with_analysis, common_knowledge_points, create_time
+        ) VALUES (
+                     #{userId}, #{preferSubject}, #{preferQuestionTypes}, #{preferDifficulty},
+                     #{preferOptionsCount}, #{preferWithAnalysis}, #{commonKnowledgePoints}, NOW()
+                 )
+    </insert>
+
+    <update id="update" parameterType="UserAiPreference">
+        UPDATE user_ai_preference SET
+                                      prefer_subject = #{preferSubject},
+                                      prefer_question_types = #{preferQuestionTypes},
+                                      prefer_difficulty = #{preferDifficulty},
+                                      prefer_options_count = #{preferOptionsCount},
+                                      prefer_with_analysis = #{preferWithAnalysis},
+                                      common_knowledge_points = #{commonKnowledgePoints},
+                                      update_time = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

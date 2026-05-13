@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.notes.mapper.NoteCommentMapper">
+
+    <resultMap type="NoteComment" id="NoteCommentResult">
+        <result property="id"    column="id"    />
+        <result property="noteId"    column="note_id"    />
+        <result property="parentId"    column="parent_id"    />
+        <result property="replyToUserId"    column="reply_to_user_id"    />
+        <result property="replyToUserName"    column="reply_to_user_name"    />
+        <result property="userId"    column="user_id"    />
+        <result property="userName"    column="user_name"    />
+        <result property="avatar"    column="avatar"    />
+        <result property="content"    column="content"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="replyCount"    column="reply_count"    />
+    </resultMap>
+
+    <sql id="selectCommentVo">
+        select c.id, c.note_id, c.parent_id, c.reply_to_user_id,
+               c.user_id, c.content, c.status, c.create_time,
+               u.nick_name as user_name, u.avatar,
+               ru.nick_name as reply_to_user_name
+        from note_comment c
+        left join sys_user u on c.user_id = u.user_id
+        left join sys_user ru on c.reply_to_user_id = ru.user_id
+    </sql>
+
+    <!-- 查询一级评论列表（分页） -->
+    <select id="selectCommentList" parameterType="NoteComment" resultMap="NoteCommentResult">
+        select temp.*,
+               COALESCE((select count(*) from note_comment 
+                   where parent_id = temp.id and status = 1), 0) as reply_count
+        from (
+            <include refid="selectCommentVo"/>
+        ) temp
+        <where>
+            temp.parent_id IS NULL
+            and temp.status = 1
+            <if test="noteId != null">and temp.note_id = #{noteId}</if>
+        </where>
+        order by temp.create_time desc
+    </select>
+
+    <!-- 查询某条评论的子回复 -->
+    <select id="selectReplies" resultMap="NoteCommentResult">
+        <include refid="selectCommentVo"/>
+        where c.parent_id = #{parentId} and c.status = 1
+        order by c.create_time asc
+    </select>
+
+    <!-- 查询评论详情 -->
+    <select id="selectCommentById" resultMap="NoteCommentResult">
+        <include refid="selectCommentVo"/>
+        where c.id = #{id} and c.status = 1
+    </select>
+
+    <!-- 查询某条评论的所有子孙回复 -->
+    <select id="selectAllDescendants" resultMap="NoteCommentResult">
+        WITH RECURSIVE comment_tree AS (
+            -- 基础查询：根评论的直接子回复
+            SELECT c.* FROM note_comment c WHERE c.parent_id = #{parentId} AND c.status = 1
+            UNION ALL
+            -- 递归查询：子回复的子回复
+            SELECT c.* FROM note_comment c
+            INNER JOIN comment_tree ct ON c.parent_id = ct.id
+            WHERE c.status = 1
+        )
+        SELECT ct.id, ct.note_id, ct.parent_id, ct.reply_to_user_id,
+               ct.user_id, ct.content, ct.status, ct.create_time,
+               u.nick_name as user_name, u.avatar,
+               ru.nick_name as reply_to_user_name
+        FROM comment_tree ct
+        LEFT JOIN sys_user u ON ct.user_id = u.user_id
+        LEFT JOIN sys_user ru ON ct.reply_to_user_id = ru.user_id
+        ORDER BY ct.create_time ASC
+    </select>
+
+    <!-- 插入评论 -->
+    <insert id="insertComment" parameterType="NoteComment" useGeneratedKeys="true" keyProperty="id">
+        insert into note_comment
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="noteId != null">note_id,</if>
+            <if test="parentId != null">parent_id,</if>
+            <if test="replyToUserId != null">reply_to_user_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="content != null and content != ''">content,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="noteId != null">#{noteId},</if>
+            <if test="parentId != null">#{parentId},</if>
+            <if test="replyToUserId != null">#{replyToUserId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="content != null and content != ''">#{content},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <!-- 删除评论（软删除） -->
+    <update id="deleteById">
+        update note_comment set status = 0
+        where id = #{id} and user_id = #{userId}
+    </update>
+
+    <!-- 统计笔记的评论总数 -->
+    <select id="countByNoteId" resultType="int">
+        select count(*) from note_comment
+        where note_id = #{noteId} and status = 1
+    </select>
+
+    <!-- 统计某条评论的子回复总数 -->
+    <select id="countReplies" resultType="int">
+        select count(*) from note_comment
+        where parent_id = #{parentId} and status = 1
+    </select>
+
+</mapper>

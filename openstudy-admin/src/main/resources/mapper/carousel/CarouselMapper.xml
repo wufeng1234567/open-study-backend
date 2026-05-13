@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.carousel.mapper.CarouselMapper">
+    
+    <resultMap type="Carousel" id="CarouselResult">
+        <result property="id"    column="id"    />
+        <result property="title"    column="title"    />
+        <result property="imageUrl"    column="image_url"    />
+        <result property="targetUrl"    column="target_url"    />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="status"    column="status"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectCarouselVo">
+        select id, title, image_url, target_url, sort_order, status, created_at, updated_at from carousel
+    </sql>
+
+    <select id="selectCarouselList" parameterType="Carousel" resultMap="CarouselResult">
+        <include refid="selectCarouselVo"/>
+        <where>  
+            <if test="id != null  and id != ''"> and id = #{id}</if>
+            <if test="title != null  and title != ''"> and title like concat('%', #{title}, '%')</if>
+            <if test="imageUrl != null  and imageUrl != ''"> and image_url like concat('%', #{imageUrl}, '%')</if>
+            <if test="sortOrder != null "> and sort_order = #{sortOrder}</if>
+            <if test="status != null "> and status = #{status}</if>
+            <if test="createdAt != null "> and created_at = #{createdAt}</if>
+            <if test="updatedAt != null "> and updated_at = #{updatedAt}</if>
+        </where>
+    </select>
+    
+    <select id="selectCarouselById" parameterType="String" resultMap="CarouselResult">
+        <include refid="selectCarouselVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCarousel" parameterType="Carousel" useGeneratedKeys="true" keyProperty="id">
+        insert into carousel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null and title != ''">title,</if>
+            <if test="imageUrl != null and imageUrl != ''">image_url,</if>
+            <if test="targetUrl != null">target_url,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="status != null">status,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="imageUrl != null and imageUrl != ''">#{imageUrl},</if>
+            <if test="targetUrl != null">#{targetUrl},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCarousel" parameterType="Carousel">
+        update carousel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="imageUrl != null and imageUrl != ''">image_url = #{imageUrl},</if>
+            <if test="targetUrl != null">target_url = #{targetUrl},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCarouselById" parameterType="String">
+        delete from carousel where id = #{id}
+    </delete>
+
+    <delete id="deleteCarouselByIds" parameterType="String">
+        delete from carousel where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

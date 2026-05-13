@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.notes.mapper.NoteQuestionBankMapper">
+
+    <resultMap type="NoteQuestionBank" id="NoteQuestionBankResult">
+        <result property="id" column="id"/>
+        <result property="noteId" column="note_id"/>
+        <result property="questionBankId" column="question_bank_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bankName" column="bank_name"/>
+        <result property="noteTitle" column="note_title"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectNoteQuestionBankVo">
+        SELECT nqb.id, nqb.note_id, nqb.question_bank_id, nqb.user_id, qb.bank_name, n.title as note_title, nqb.create_time
+        FROM note_question_bank nqb
+        LEFT JOIN question_bank qb ON nqb.question_bank_id = qb.id
+        LEFT JOIN note n ON nqb.note_id = n.id
+    </sql>
+
+    <select id="selectNoteQuestionBankList" parameterType="NoteQuestionBank" resultMap="NoteQuestionBankResult">
+        <include refid="selectNoteQuestionBankVo"/>
+        <where>
+            <if test="noteId != null"> AND nqb.note_id = #{noteId}</if>
+            <if test="questionBankId != null"> AND nqb.question_bank_id = #{questionBankId}</if>
+            <if test="userId != null"> AND nqb.user_id = #{userId}</if>
+        </where>
+    </select>
+
+    <select id="selectNoteQuestionBankById" parameterType="Long" resultMap="NoteQuestionBankResult">
+        <include refid="selectNoteQuestionBankVo"/>
+        WHERE nqb.id = #{id}
+    </select>
+
+    <select id="selectByNoteId" parameterType="Long" resultMap="NoteQuestionBankResult">
+        <include refid="selectNoteQuestionBankVo"/>
+        WHERE nqb.note_id = #{noteId}
+    </select>
+
+    <select id="selectByBankId" parameterType="Long" resultMap="NoteQuestionBankResult">
+        <include refid="selectNoteQuestionBankVo"/>
+        WHERE nqb.question_bank_id = #{bankId}
+    </select>
+
+    <select id="countByNoteId" parameterType="Long" resultType="int">
+        SELECT COUNT(1) FROM note_question_bank WHERE note_id = #{noteId}
+    </select>
+
+    <insert id="insertNoteQuestionBank" parameterType="NoteQuestionBank" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO note_question_bank
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="noteId != null">note_id,</if>
+            <if test="questionBankId != null">question_bank_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="noteId != null">#{noteId},</if>
+            <if test="questionBankId != null">#{questionBankId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateNoteQuestionBank" parameterType="NoteQuestionBank">
+        UPDATE note_question_bank
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="noteId != null">note_id = #{noteId},</if>
+            <if test="questionBankId != null">question_bank_id = #{questionBankId},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+        </trim>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteNoteQuestionBankById" parameterType="Long">
+        DELETE FROM note_question_bank WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteNoteQuestionBankByIds" parameterType="String">
+        DELETE FROM note_question_bank WHERE id IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteByNoteIdAndBankId">
+        DELETE FROM note_question_bank WHERE note_id = #{noteId} AND question_bank_id = #{bankId}
+    </delete>
+</mapper>

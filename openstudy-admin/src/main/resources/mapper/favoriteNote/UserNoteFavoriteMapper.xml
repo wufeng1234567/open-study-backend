@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.favoriteNote.mapper.UserNoteFavoriteMapper">
+
+    <resultMap type="UserNoteFavorite" id="UserNoteFavoriteResult">
+        <result property="favoriteId"    column="favorite_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="noteId"    column="note_id"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectUserNoteFavoriteVo">
+        select favorite_id, user_id, note_id, create_time from user_note_favorite
+    </sql>
+
+    <select id="selectUserNoteFavoriteList" parameterType="UserNoteFavorite" resultMap="UserNoteFavoriteResult">
+        <include refid="selectUserNoteFavoriteVo"/>
+        <where>
+            <if test="userId != null"> and user_id = #{userId}</if>
+            <if test="noteId != null"> and note_id = #{noteId}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectUserNoteFavoriteByFavoriteId" parameterType="Long" resultMap="UserNoteFavoriteResult">
+        <include refid="selectUserNoteFavoriteVo"/>
+        where favorite_id = #{favoriteId}
+    </select>
+
+    <select id="checkNoteExists" parameterType="Long" resultType="int">
+        SELECT COUNT(1) FROM note WHERE id = #{noteId}
+    </select>
+
+    <select id="checkFavoriteExists" resultType="int">
+        SELECT COUNT(1)
+        FROM user_note_favorite
+        WHERE user_id = #{userId}
+        AND note_id = #{noteId}
+    </select>
+
+    <insert id="insertUserNoteFavorite" parameterType="UserNoteFavorite" useGeneratedKeys="true" keyProperty="favoriteId">
+        insert into user_note_favorite
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="noteId != null">note_id,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="noteId != null">#{noteId},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <delete id="deleteUserNoteFavoriteByFavoriteId" parameterType="Long">
+        delete from user_note_favorite where favorite_id = #{favoriteId}
+    </delete>
+
+    <delete id="deleteByUserAndNote">
+        delete from user_note_favorite where user_id = #{userId} and note_id = #{noteId}
+    </delete>
+
+    <delete id="deleteUserNoteFavoriteByFavoriteIds" parameterType="String">
+        delete from user_note_favorite where favorite_id in
+        <foreach item="favoriteId" collection="array" open="(" separator="," close=")">
+            #{favoriteId}
+        </foreach>
+    </delete>
+
+    <select id="selectFavoriteNoteIdsByUserId" parameterType="Long" resultType="Long">
+        SELECT note_id FROM user_note_favorite WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+</mapper>

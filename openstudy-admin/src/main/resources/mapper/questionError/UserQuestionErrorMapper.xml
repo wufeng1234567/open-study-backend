@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.questionError.mapper.UserQuestionErrorMapper">
+    
+    <resultMap type="UserQuestionError" id="UserQuestionErrorResult">
+        <result property="errorId"    column="error_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="questionId"    column="question_id"    />
+        <result property="bankId"    column="bank_id"    />
+        <result property="errorTime"    column="error_time"    />
+        <result property="lastErrorTime"    column="last_error_time"    />
+        <result property="errorCount"    column="error_count"    />
+        <result property="notes"    column="notes"    />
+        <result property="tags"    column="tags"    />
+        <result property="difficultyRating"    column="difficulty_rating"    />
+        <result property="reviewCount"    column="review_count"    />
+        <result property="lastReviewTime"    column="last_review_time"    />
+        <result property="nextReviewTime"    column="next_review_time"    />
+        <result property="isMastered"    column="is_mastered"    />
+        <result property="status"    column="status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectUserQuestionErrorVo">
+        select error_id, user_id, question_id, bank_id, error_time, last_error_time, error_count, notes, tags, difficulty_rating, review_count, last_review_time, next_review_time, is_mastered, status, create_time, update_time from user_question_error
+    </sql>
+
+    <select id="selectUserQuestionErrorList" parameterType="UserQuestionError" resultMap="UserQuestionErrorResult">
+        <include refid="selectUserQuestionErrorVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="questionId != null "> and question_id = #{questionId}</if>
+            <if test="bankId != null "> and bank_id = #{bankId}</if>
+            <if test="errorTime != null "> and error_time = #{errorTime}</if>
+            <if test="lastErrorTime != null "> and last_error_time = #{lastErrorTime}</if>
+            <if test="errorCount != null "> and error_count = #{errorCount}</if>
+            <if test="notes != null  and notes != ''"> and notes = #{notes}</if>
+            <if test="tags != null  and tags != ''"> and tags = #{tags}</if>
+            <if test="difficultyRating != null "> and difficulty_rating = #{difficultyRating}</if>
+            <if test="reviewCount != null "> and review_count = #{reviewCount}</if>
+            <if test="lastReviewTime != null "> and last_review_time = #{lastReviewTime}</if>
+            <if test="nextReviewTime != null "> and next_review_time = #{nextReviewTime}</if>
+            <if test="isMastered != null "> and is_mastered = #{isMastered}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectUserQuestionErrorByErrorId" parameterType="Long" resultMap="UserQuestionErrorResult">
+        <include refid="selectUserQuestionErrorVo"/>
+        where error_id = #{errorId}
+    </select>
+    <!-- ✅ 新增：验证题目是否存在的方法 -->
+    <select id="checkUserQuestionErrorExists" parameterType="map" resultType="int">
+        SELECT COUNT(1)
+        FROM user_question_error  <!-- 注意表名正确 -->
+        WHERE user_id = #{userId}  <!-- 需要用户ID -->
+        AND question_id = #{questionId}  <!-- 需要题目ID -->
+        AND status = 1  <!-- 注意状态值是数字1，不是字符串'1' -->
+    </select>
+    <!-- ✅ 新增：增加错误次数（原子操作） -->
+    <update id="incrementErrorCount" parameterType="map">
+        UPDATE user_question_error
+        SET error_count = error_count + 1,
+            last_error_time = NOW(),
+            update_time = NOW()
+        WHERE user_id = #{userId}
+          AND question_id = #{questionId}
+          AND status = 1
+    </update>
+
+    <insert id="insertUserQuestionError" parameterType="UserQuestionError" useGeneratedKeys="true" keyProperty="errorId">
+        insert into user_question_error
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="questionId != null">question_id,</if>
+            <if test="bankId != null">bank_id,</if>
+            <if test="errorTime != null">error_time,</if>
+            <if test="lastErrorTime != null">last_error_time,</if>
+            <if test="errorCount != null">error_count,</if>
+            <if test="notes != null">notes,</if>
+            <if test="tags != null">tags,</if>
+            <if test="difficultyRating != null">difficulty_rating,</if>
+            <if test="reviewCount != null">review_count,</if>
+            <if test="lastReviewTime != null">last_review_time,</if>
+            <if test="nextReviewTime != null">next_review_time,</if>
+            <if test="isMastered != null">is_mastered,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="questionId != null">#{questionId},</if>
+            <if test="bankId != null">#{bankId},</if>
+            <if test="errorTime != null">#{errorTime},</if>
+            <if test="lastErrorTime != null">#{lastErrorTime},</if>
+            <if test="errorCount != null">#{errorCount},</if>
+            <if test="notes != null">#{notes},</if>
+            <if test="tags != null">#{tags},</if>
+            <if test="difficultyRating != null">#{difficultyRating},</if>
+            <if test="reviewCount != null">#{reviewCount},</if>
+            <if test="lastReviewTime != null">#{lastReviewTime},</if>
+            <if test="nextReviewTime != null">#{nextReviewTime},</if>
+            <if test="isMastered != null">#{isMastered},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateUserQuestionError" parameterType="UserQuestionError">
+        update user_question_error
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="questionId != null">question_id = #{questionId},</if>
+            <if test="bankId != null">bank_id = #{bankId},</if>
+            <if test="errorTime != null">error_time = #{errorTime},</if>
+            <if test="lastErrorTime != null">last_error_time = #{lastErrorTime},</if>
+            <if test="errorCount != null">error_count = #{errorCount},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="difficultyRating != null">difficulty_rating = #{difficultyRating},</if>
+            <if test="reviewCount != null">review_count = #{reviewCount},</if>
+            <if test="lastReviewTime != null">last_review_time = #{lastReviewTime},</if>
+            <if test="nextReviewTime != null">next_review_time = #{nextReviewTime},</if>
+            <if test="isMastered != null">is_mastered = #{isMastered},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where error_id = #{errorId}
+    </update>
+
+    <delete id="deleteUserQuestionErrorByErrorId" parameterType="Long">
+        delete from user_question_error where error_id = #{errorId}
+    </delete>
+
+    <delete id="deleteUserQuestionErrorByErrorIds" parameterType="String">
+        delete from user_question_error where error_id in 
+        <foreach item="errorId" collection="array" open="(" separator="," close=")">
+            #{errorId}
+        </foreach>
+    </delete>
+</mapper>

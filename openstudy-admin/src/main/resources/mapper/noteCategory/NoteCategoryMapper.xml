@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.noteCategory.mapper.NoteCategoryMapper">
+    
+    <resultMap type="NoteCategory" id="NoteCategoryResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="name"    column="name"    />
+        <result property="orderNum"    column="order_num"    />
+        <result property="createTime"    column="create_time"    />
+    </resultMap>
+
+    <sql id="selectNoteCategoryVo">
+        select id, user_id, name, order_num, create_time from note_category
+    </sql>
+
+    <select id="selectNoteCategoryList" parameterType="NoteCategory" resultMap="NoteCategoryResult">
+        <include refid="selectNoteCategoryVo"/>
+        <where>  
+            <if test="userId != null "> and user_id like concat('%', #{userId}, '%')</if>
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+            <if test="orderNum != null "> and order_num like concat('%', #{orderNum}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectNoteCategoryById" parameterType="Long" resultMap="NoteCategoryResult">
+        <include refid="selectNoteCategoryVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertNoteCategory" parameterType="NoteCategory" useGeneratedKeys="true" keyProperty="id">
+        insert into note_category
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="name != null and name != ''">name,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateNoteCategory" parameterType="NoteCategory">
+        update note_category
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteNoteCategoryById" parameterType="Long">
+        delete from note_category where id = #{id}
+    </delete>
+
+    <delete id="deleteNoteCategoryByIds" parameterType="String">
+        delete from note_category where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

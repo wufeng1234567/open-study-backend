@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug OpenStudyApplication",
+            "request": "launch",
+            "mainClass": "com.openstudy.OpenStudyApplication",
+            "projectName": "openstudy-server-admin",
+            "vmArgs": "-Dspring.profiles.active=druid -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-OpenStudyApplication",
+            "request": "launch",
+            "mainClass": "com.openstudy.OpenStudyApplication",
+            "projectName": "openstudy-server-admin",
+            "vmArgs": "-Dspring.profiles.active=druid -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "node-terminal",
+            "name": "启动 OpenStudy（无乱码）",
+            "request": "launch",
+            "command": "chcp 65001 *> $null ; cd openstudy-server-springboot3/openstudy-admin ; mvn spring-boot:run \"-Dspring.profiles.active=druid\"",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

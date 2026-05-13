@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.courses.mapper.CoursesMapper">
+    
+    <resultMap type="Courses" id="CoursesResult">
+        <result property="courseId"    column="course_id"    />
+        <result property="courseCode"    column="course_code"    />
+        <result property="courseName"    column="course_name"    />
+        <result property="description"    column="description"    />
+        <result property="credits"    column="credits"    />
+        <result property="department"    column="department"    />
+        <result property="instructor"    column="instructor"    />
+        <result property="semester"    column="semester"    />
+        <result property="year"    column="year"    />
+        <result property="maxStudents"    column="max_students"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectCoursesVo">
+        select course_id, course_code, course_name, description, credits, department, instructor, semester, year, max_students, created_at from courses
+    </sql>
+
+    <select id="selectCoursesList" parameterType="Courses" resultMap="CoursesResult">
+        <include refid="selectCoursesVo"/>
+        <where>  
+            <if test="courseCode != null  and courseCode != ''"> and course_code = #{courseCode}</if>
+            <if test="courseName != null  and courseName != ''"> and course_name like concat('%', #{courseName}, '%')</if>
+            <if test="description != null  and description != ''"> and description = #{description}</if>
+            <if test="credits != null "> and credits = #{credits}</if>
+            <if test="department != null  and department != ''"> and department = #{department}</if>
+            <if test="instructor != null  and instructor != ''"> and instructor = #{instructor}</if>
+            <if test="semester != null  and semester != ''"> and semester = #{semester}</if>
+            <if test="year != null "> and year = #{year}</if>
+            <if test="maxStudents != null "> and max_students = #{maxStudents}</if>
+        </where>
+    </select>
+    
+    <select id="selectCoursesByCourseId" parameterType="Long" resultMap="CoursesResult">
+        <include refid="selectCoursesVo"/>
+        where course_id = #{courseId}
+    </select>
+
+    <insert id="insertCourses" parameterType="Courses" useGeneratedKeys="true" keyProperty="courseId">
+        insert into courses
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="courseCode != null and courseCode != ''">course_code,</if>
+            <if test="courseName != null and courseName != ''">course_name,</if>
+            <if test="description != null">description,</if>
+            <if test="credits != null">credits,</if>
+            <if test="department != null">department,</if>
+            <if test="instructor != null">instructor,</if>
+            <if test="semester != null">semester,</if>
+            <if test="year != null">year,</if>
+            <if test="maxStudents != null">max_students,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="courseCode != null and courseCode != ''">#{courseCode},</if>
+            <if test="courseName != null and courseName != ''">#{courseName},</if>
+            <if test="description != null">#{description},</if>
+            <if test="credits != null">#{credits},</if>
+            <if test="department != null">#{department},</if>
+            <if test="instructor != null">#{instructor},</if>
+            <if test="semester != null">#{semester},</if>
+            <if test="year != null">#{year},</if>
+            <if test="maxStudents != null">#{maxStudents},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCourses" parameterType="Courses">
+        update courses
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="courseCode != null and courseCode != ''">course_code = #{courseCode},</if>
+            <if test="courseName != null and courseName != ''">course_name = #{courseName},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="credits != null">credits = #{credits},</if>
+            <if test="department != null">department = #{department},</if>
+            <if test="instructor != null">instructor = #{instructor},</if>
+            <if test="semester != null">semester = #{semester},</if>
+            <if test="year != null">year = #{year},</if>
+            <if test="maxStudents != null">max_students = #{maxStudents},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where course_id = #{courseId}
+    </update>
+
+    <delete id="deleteCoursesByCourseId" parameterType="Long">
+        delete from courses where course_id = #{courseId}
+    </delete>
+
+    <delete id="deleteCoursesByCourseIds" parameterType="String">
+        delete from courses where course_id in 
+        <foreach item="courseId" collection="array" open="(" separator="," close=")">
+            #{courseId}
+        </foreach>
+    </delete>
+</mapper>

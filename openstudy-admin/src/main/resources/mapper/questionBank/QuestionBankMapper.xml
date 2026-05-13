@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.questionBank.mapper.QuestionBankMapper">
+
+    <resultMap type="QuestionBank" id="QuestionBankResult">
+        <result property="id" column="id"/>
+        <result property="bankName" column="bank_name"/>
+        <result property="subject" column="subject"/>
+        <result property="description" column="description"/>
+        <result property="coverImage" column="cover_image"/>
+        <result property="totalQuestions" column="total_questions"/>
+        <result property="status" column="status"/>
+        <result property="userId" column="user_id"/>
+        <result property="isPublic" column="is_public"/>   <!-- ✅ 新增 -->
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectQuestionBankVo">
+        SELECT
+        qb.id,
+        qb.bank_name,
+        qb.subject,
+        qb.description,
+        qb.cover_image,
+        (SELECT COUNT(*) FROM question_main qm WHERE bank_id = qb.id AND qm.status = '0') AS total_questions,
+        qb.status,
+        qb.user_id,
+        qb.is_public,   <!-- ✅ 新增 -->
+        qb.create_time
+        FROM question_bank qb
+    </sql>
+
+    <select id="selectQuestionBankList" parameterType="QuestionBank" resultMap="QuestionBankResult">
+        <include refid="selectQuestionBankVo"/>
+        <where>
+            <if test="id != null"> AND qb.id = #{id}</if>
+            <if test="bankName != null and bankName != ''"> AND qb.bank_name LIKE CONCAT('%', #{bankName}, '%')</if>
+            <if test="subject != null and subject != ''"> AND qb.subject LIKE CONCAT('%', #{subject}, '%')</if>
+            <if test="description != null and description != ''"> AND qb.description LIKE CONCAT('%', #{description}, '%')</if>
+            <if test="status != null and status != ''"> AND qb.status = #{status}</if>
+            <if test="userId != null"> AND qb.user_id = #{userId}</if>
+            <if test="isPublic != null"> AND qb.is_public = #{isPublic}</if>   <!-- ✅ 新增 -->
+            <if test="createTime != null"> AND qb.create_time = #{createTime}</if>
+        </where>
+    </select>
+
+    <select id="selectQuestionBankById" parameterType="Long" resultMap="QuestionBankResult">
+        SELECT
+        qb.id,
+        qb.bank_name,
+        qb.subject,
+        qb.description,
+        qb.cover_image,
+        (SELECT COUNT(*) FROM question_main qm WHERE bank_id = qb.id AND qm.status = '0') AS total_questions,
+        qb.status,
+        qb.user_id,
+        qb.is_public,   <!-- ✅ 新增 -->
+        qb.create_time
+        FROM question_bank qb
+        WHERE qb.id = #{id}
+    </select>
+
+    <select id="selectQuestionBankListByUserId" parameterType="Long" resultMap="QuestionBankResult">
+        <include refid="selectQuestionBankVo"/>
+        WHERE qb.user_id = #{userId}
+    </select>
+
+    <insert id="insertQuestionBank" parameterType="QuestionBank" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO question_bank
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bankName != null and bankName != ''">bank_name,</if>
+            <if test="subject != null">subject,</if>
+            <if test="description != null">description,</if>
+            <if test="coverImage != null">cover_image,</if>
+            <if test="totalQuestions != null">total_questions,</if>
+            <if test="status != null">status,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="isPublic != null">is_public,</if>   <!-- ✅ 新增 -->
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="bankName != null and bankName != ''">#{bankName},</if>
+            <if test="subject != null">#{subject},</if>
+            <if test="description != null">#{description},</if>
+            <if test="coverImage != null">#{coverImage},</if>
+            <if test="totalQuestions != null">#{totalQuestions},</if>
+            <if test="status != null">#{status},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="isPublic != null">#{isPublic},</if>   <!-- ✅ 新增 -->
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateQuestionBank" parameterType="QuestionBank">
+        UPDATE question_bank
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="bankName != null and bankName != ''">bank_name = #{bankName},</if>
+            <if test="subject != null">subject = #{subject},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="coverImage != null">cover_image = #{coverImage},</if>
+            <if test="totalQuestions != null">total_questions = #{totalQuestions},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isPublic != null">is_public = #{isPublic},</if>   <!-- ✅ 新增 -->
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 其他 delete 语句保持不变 -->
+    <delete id="deleteQuestionBankById" parameterType="Long">
+        DELETE FROM question_bank WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteQuestionBankByIds" parameterType="String">
+        DELETE FROM question_bank WHERE id IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="checkBankExists" resultType="int">
+        SELECT COUNT(1) FROM question_bank WHERE id = #{bankId}
+    </select>
+</mapper>

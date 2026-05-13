@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.favoriteBank.mapper.UserBankFavoriteMapper">
+    
+    <resultMap type="UserBankFavorite" id="UserBankFavoriteResult">
+        <result property="favoriteId"    column="favorite_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="bankId"    column="bank_id"    />
+        <result property="notes"    column="notes"    />
+        <result property="tags"    column="tags"    />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="isStarred"    column="is_starred"    />
+        <result property="lastStudyTime"    column="last_study_time"    />
+        <result property="studyCount"    column="study_count"    />
+        <result property="favoriteStatus"    column="favorite_status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectUserBankFavoriteVo">
+        select favorite_id, user_id, bank_id, notes, tags, sort_order, is_starred, last_study_time, study_count, favorite_status, create_time, update_time from user_bank_favorite
+    </sql>
+
+    <select id="selectUserBankFavoriteList" parameterType="UserBankFavorite" resultMap="UserBankFavoriteResult">
+        <include refid="selectUserBankFavoriteVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="bankId != null "> and bank_id = #{bankId}</if>
+            <if test="notes != null  and notes != ''"> and notes = #{notes}</if>
+            <if test="tags != null  and tags != ''"> and tags = #{tags}</if>
+            <if test="isStarred != null "> and is_starred = #{isStarred}</if>
+            <if test="lastStudyTime != null "> and last_study_time = #{lastStudyTime}</if>
+            <if test="studyCount != null "> and study_count = #{studyCount}</if>
+            <if test="favoriteStatus != null "> and favorite_status = #{favoriteStatus}</if>
+        </where>
+    </select>
+    
+    <select id="selectUserBankFavoriteByFavoriteId" parameterType="Long" resultMap="UserBankFavoriteResult">
+        <include refid="selectUserBankFavoriteVo"/>
+        where favorite_id = #{favoriteId}
+    </select>
+
+    <insert id="insertUserBankFavorite" parameterType="UserBankFavorite" useGeneratedKeys="true" keyProperty="favoriteId">
+        insert into user_bank_favorite
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="bankId != null">bank_id,</if>
+            <if test="notes != null">notes,</if>
+            <if test="tags != null">tags,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="isStarred != null">is_starred,</if>
+            <if test="lastStudyTime != null">last_study_time,</if>
+            <if test="studyCount != null">study_count,</if>
+            <if test="favoriteStatus != null">favorite_status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="bankId != null">#{bankId},</if>
+            <if test="notes != null">#{notes},</if>
+            <if test="tags != null">#{tags},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="isStarred != null">#{isStarred},</if>
+            <if test="lastStudyTime != null">#{lastStudyTime},</if>
+            <if test="studyCount != null">#{studyCount},</if>
+            <if test="favoriteStatus != null">#{favoriteStatus},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateUserBankFavorite" parameterType="UserBankFavorite">
+        update user_bank_favorite
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="bankId != null">bank_id = #{bankId},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="isStarred != null">is_starred = #{isStarred},</if>
+            <if test="lastStudyTime != null">last_study_time = #{lastStudyTime},</if>
+            <if test="studyCount != null">study_count = #{studyCount},</if>
+            <if test="favoriteStatus != null">favorite_status = #{favoriteStatus},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where favorite_id = #{favoriteId}
+    </update>
+
+    <delete id="deleteUserBankFavoriteByFavoriteId" parameterType="Long">
+        delete from user_bank_favorite where favorite_id = #{favoriteId}
+    </delete>
+
+    <delete id="deleteUserBankFavoriteByFavoriteIds" parameterType="String">
+        delete from user_bank_favorite where favorite_id in 
+        <foreach item="favoriteId" collection="array" open="(" separator="," close=")">
+            #{favoriteId}
+        </foreach>
+    </delete>
+
+    <!-- 检查题目是否存在 -->
+    <select id="checkBankExists" parameterType="Long" resultType="int">
+        SELECT COUNT(1) FROM question_bank WHERE id = #{bankId}
+    </select>
+
+    <!-- 修改这个SQL，移除 del_flag 条件 -->
+    <select id="checkFavoriteExists" resultType="int">
+        SELECT COUNT(*)
+        FROM user_bank_favorite
+        WHERE user_id = #{userId} AND bank_id = #{bankId}
+        <if test="excludeFavoriteId != null">
+            AND favorite_id != #{excludeFavoriteId}
+        </if>
+    </select>
+
+    <!-- 根据用户ID和题库ID删除收藏 -->
+    <delete id="deleteUserBankFavoriteByUserIdAndBankId">
+        DELETE FROM user_bank_favorite
+        WHERE user_id = #{userId} AND bank_id = #{bankId}
+    </delete>
+
+
+</mapper>

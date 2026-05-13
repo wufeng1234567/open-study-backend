@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.questionMain.mapper.QuestionMainMapper">
+
+    <resultMap type="QuestionMain" id="QuestionMainResult">
+        <result property="id"                column="id" />
+        <result property="bankId"            column="bank_id" />
+        <result property="questionType"      column="question_type" />
+        <result property="difficulty"        column="difficulty" />
+        <result property="questionText"      column="question_text" />
+        <result property="content"           column="content" />
+        <result property="options"           column="options" />
+        <result property="answer"            column="answer" />
+        <result property="analysis"          column="analysis" />
+        <result property="hasSubQuestions"   column="has_sub_questions" />
+        <result property="sortOrder"         column="sort_order" />
+        <result property="score"             column="score" />
+        <result property="createTime"        column="create_time" />
+        <result property="status"    column="status"/>
+    </resultMap>
+
+    <resultMap id="QuestionMainQuestionSubResult" type="QuestionMain" extends="QuestionMainResult">
+        <collection property="questionSubList" ofType="QuestionSub" column="id" select="selectQuestionSubList" />
+    </resultMap>
+
+    <!-- 在 QuestionMainMapper.xml 中新增或修改 -->
+    <select id="selectQuestionMainAll" parameterType="map" resultMap="QuestionMainQuestionSubResult">
+        <include refid="selectQuestionMainVo"/>
+        <where>
+            <if test="bankId != null"> and bank_id = #{bankId}</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+        </where>
+        order by sort_order, id
+    </select>
+
+    <!-- 子题 resultMap 保持不变（它已有 score） -->
+    <resultMap type="QuestionSub" id="QuestionSubResult">
+        <result property="id"            column="id" />
+        <result property="mainId"        column="main_id" />
+        <result property="questionText"  column="question_text" />
+        <result property="questionType"  column="question_type" />
+        <result property="options"       column="options" />
+        <result property="answer"        column="answer" />
+        <result property="analysis"      column="analysis" />
+        <result property="sortOrder"     column="sort_order" />
+        <result property="score"         column="score" />
+    </resultMap>
+
+    <!-- 🔺 修改：SELECT 列表中加入 score -->
+    <sql id="selectQuestionMainVo">
+        select
+            id,
+            bank_id,
+            question_type,
+            difficulty,
+            question_text,
+            content,
+            `options`,
+            answer,
+            analysis,
+            has_sub_questions,
+            sort_order,
+            score,
+            create_time,
+            status
+        from question_main
+    </sql>
+
+    <select id="selectQuestionMainList" parameterType="QuestionMain" resultMap="QuestionMainResult">
+        <include refid="selectQuestionMainVo"/>
+        <where>
+            <if test="id != null "> and id = #{id}</if>
+            <if test="bankId != null "> and bank_id = #{bankId}</if>
+            <if test="questionType != null "> and question_type = #{questionType}</if>
+            <if test="difficulty != null "> and difficulty = #{difficulty}</if>
+            <if test="questionText != null and questionText != ''"> and question_text like concat('%', #{questionText}, '%')</if>
+            <if test="content != null and content != ''"> and content like concat('%', #{content}, '%')</if>
+            <if test="answer != null and answer != ''"> and answer like concat('%', #{answer}, '%')</if>
+            <if test="analysis != null and analysis != ''"> and analysis like concat('%', #{analysis}, '%')</if>
+            <if test="hasSubQuestions != null "> and has_sub_questions = #{hasSubQuestions}</if>
+            <if test="sortOrder != null "> and sort_order = #{sortOrder}</if>
+            <!-- 🔺 可选：支持按分值查询 -->
+            <if test="score != null "> and score = #{score}</if>
+            <if test="status != null"> and status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectQuestionMainById" parameterType="Long" resultMap="QuestionMainQuestionSubResult">
+        select
+        id, bank_id, question_type, difficulty, question_text, content, answer, analysis,
+        has_sub_questions, sort_order, score, create_time, options ,status<!-- 🔺 加入 score -->
+        from question_main
+        where id = #{id}
+    </select>
+
+    <!-- ✅ 新增：验证题目是否存在的方法 -->
+    <select id="checkQuestionExists" parameterType="Long" resultType="int">
+        select count(1) from question_main
+        where id = #{questionId} and status = '0'
+    </select>
+
+    <!-- ✅ 新增：获取题目简单信息用于显示 -->
+    <select id="selectQuestionSimpleInfoById" parameterType="Long" resultType="map">
+        select
+            id as questionId,
+            question_text as questionText,
+            question_type as questionType,
+            bank_id as bankId
+        from question_main
+        where id = #{questionId}
+    </select>
+
+    <!-- ✅ 新增：根据题目ID列表批量查询题目信息 -->
+    <select id="selectQuestionListByIds" parameterType="list" resultType="map">
+        select
+        id as questionId,
+        question_text as questionText,
+        question_type as questionType,
+        bank_id as bankId
+        from question_main
+        where id in
+        <foreach item="id" collection="list" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and status = '0'
+    </select>
+
+    <select id="selectQuestionSubList" resultMap="QuestionSubResult">
+        select id, main_id, question_text, question_type, options, answer, analysis, sort_order, score
+        from question_sub
+        where main_id = #{main_id}
+    </select>
+
+    <!-- 🔺 insert: 加入 score -->
+    <insert id="insertQuestionMain" parameterType="QuestionMain" useGeneratedKeys="true" keyProperty="id">
+        insert into question_main
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bankId != null">bank_id,</if>
+            <if test="questionType != null">question_type,</if>
+            <if test="difficulty != null">difficulty,</if>
+            <if test="questionText != null">question_text,</if>
+            <if test="content != null">content,</if>
+            <if test="options != null">`options`,</if>   <!-- ✅ 添加这一行 -->
+            <if test="answer != null">answer,</if>
+            <if test="analysis != null">analysis,</if>
+            <if test="hasSubQuestions != null">has_sub_questions,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="score != null">score,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="status != null">status,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bankId != null">#{bankId},</if>
+            <if test="questionType != null">#{questionType},</if>
+            <if test="difficulty != null">#{difficulty},</if>
+            <if test="questionText != null">#{questionText},</if>
+            <if test="content != null">#{content},</if>
+            <if test="options != null">#{options},</if>   <!-- ✅ 添加这一行 -->
+            <if test="answer != null">#{answer},</if>
+            <if test="analysis != null">#{analysis},</if>
+            <if test="hasSubQuestions != null">#{hasSubQuestions},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="score != null">#{score},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="status != null">#{status},</if>
+        </trim>
+    </insert>
+
+    <!-- 🔺 update: 加入 score -->
+    <update id="updateQuestionMain" parameterType="QuestionMain">
+        update question_main
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="bankId != null">bank_id = #{bankId},</if>
+            <if test="questionType != null">question_type = #{questionType},</if>
+            <if test="difficulty != null">difficulty = #{difficulty},</if>
+            <if test="questionText != null">question_text = #{questionText},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="options != null">`options` = #{options},</if>   <!-- ✅ 添加这一行 -->
+            <if test="answer != null">answer = #{answer},</if>
+            <if test="analysis != null">analysis = #{analysis},</if>
+            <if test="hasSubQuestions != null">has_sub_questions = #{hasSubQuestions},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="score != null">score = #{score},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="status != null">status = #{status},</if>
+        </trim>
+        where id = #{id}
+    </update>
+    <!-- 其他 delete / batch 方法无需修改 -->
+
+    <delete id="deleteQuestionMainById" parameterType="Long">
+        delete from question_main where id = #{id}
+    </delete>
+
+    <delete id="deleteQuestionMainByIds" parameterType="String">
+        delete from question_main where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteQuestionSubByMainIds" parameterType="String">
+        delete from question_sub where main_id in
+        <foreach item="mainId" collection="array" open="(" separator="," close=")">
+            #{mainId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteQuestionSubByMainId" parameterType="Long">
+        delete from question_sub where main_id = #{mainId}
+    </delete>
+
+    <insert id="batchQuestionSub">
+        insert into question_sub(id, main_id, question_text, question_type, options, answer, analysis, sort_order, score) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.id}, #{item.mainId}, #{item.questionText}, #{item.questionType}, #{item.options}, #{item.answer}, #{item.analysis}, #{item.sortOrder}, #{item.score})
+        </foreach>
+    </insert>
+
+    <select id="selectQuestionTextsByBankId" resultType="String">
+        SELECT question_text FROM question_main
+        WHERE bank_id = #{bankId} AND status = '0'
+        ORDER BY create_time DESC
+            LIMIT #{limit}
+    </select>
+</mapper>

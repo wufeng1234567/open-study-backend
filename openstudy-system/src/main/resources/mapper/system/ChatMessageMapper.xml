@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.system.mapper.ChatMessageMapper">
+
+    <resultMap type="com.openstudy.system.domain.ChatMessage" id="ChatMessageResult">
+        <result property="id" column="id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="senderName" column="sender_name"/>
+        <result property="senderNickname" column="sender_nickname"/>
+        <result property="senderAvatar" column="sender_avatar"/>
+        <result property="receiverId" column="receiver_id"/>
+        <result property="receiverName" column="receiver_name"/>
+        <result property="receiverNickname" column="receiver_nickname"/>
+        <result property="receiverAvatar" column="receiver_avatar"/>
+        <result property="content" column="content"/>
+        <result property="isRead" column="is_read"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="hiddenBy" column="hidden_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insertChatMessage" parameterType="com.openstudy.system.domain.ChatMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_message (
+            sender_id, sender_name, sender_nickname, sender_avatar,
+            receiver_id, receiver_name, receiver_nickname, receiver_avatar,
+            content, is_read, is_deleted, hidden_by, create_time
+        ) VALUES (
+            #{senderId}, #{senderName}, #{senderNickname}, #{senderAvatar},
+            #{receiverId}, #{receiverName}, #{receiverNickname}, #{receiverAvatar},
+            #{content}, #{isRead}, #{isDeleted}, #{hiddenBy}, NOW()
+        )
+    </insert>
+
+    <insert id="batchInsertChatMessage" parameterType="java.util.List">
+        INSERT INTO chat_message (
+            sender_id, sender_name, sender_nickname, sender_avatar,
+            receiver_id, receiver_name, receiver_nickname, receiver_avatar,
+            content, is_read, is_deleted, hidden_by, create_time
+        ) VALUES
+        <foreach collection="messages" item="msg" separator=",">
+            (
+                #{msg.senderId}, #{msg.senderName}, #{msg.senderNickname}, #{msg.senderAvatar},
+                #{msg.receiverId}, #{msg.receiverName}, #{msg.receiverNickname}, #{msg.receiverAvatar},
+                #{msg.content}, #{msg.isRead}, #{msg.isDeleted}, #{msg.hiddenBy}, #{msg.createTime}
+            )
+        </foreach>
+    </insert>
+
+    <select id="selectChatMessagesByConversation" resultMap="ChatMessageResult">
+        SELECT * FROM chat_message
+        WHERE is_deleted = 0
+        AND ((sender_id = #{userId1} AND receiver_id = #{userId2})
+             OR (sender_id = #{userId2} AND receiver_id = #{userId1}))
+        AND (hidden_by IS NULL OR hidden_by NOT LIKE CONCAT('%,', #{currentUserId}, ',%'))
+        ORDER BY create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectRecentConversations" resultMap="ChatMessageResult">
+        SELECT m.id, m.sender_id, m.sender_name, m.sender_nickname, m.sender_avatar,
+               m.receiver_id, m.receiver_name, m.receiver_nickname, m.receiver_avatar,
+               m.content, m.is_read, m.is_deleted, m.create_time
+        FROM chat_message m
+        INNER JOIN (
+            SELECT MAX(m2.id) as max_id
+            FROM chat_message m2
+            WHERE m2.is_deleted = 0
+            AND (m2.sender_id = #{userId} OR m2.receiver_id = #{userId})
+            AND (m2.hidden_by IS NULL OR m2.hidden_by NOT LIKE CONCAT('%,', #{userId}, ',%'))
+            GROUP BY LEAST(m2.sender_id, m2.receiver_id), GREATEST(m2.sender_id, m2.receiver_id)
+        ) latest ON m.id = latest.max_id
+        ORDER BY m.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectLastMessageBetweenUsers" resultMap="ChatMessageResult">
+        SELECT * FROM chat_message
+        WHERE is_deleted = 0
+        AND ((sender_id = #{otherUserId} AND receiver_id = #{currentUserId})
+             OR (sender_id = #{currentUserId} AND receiver_id = #{otherUserId}))
+        AND (hidden_by IS NULL OR hidden_by NOT LIKE CONCAT('%,', #{currentUserId}, ',%'))
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markMessagesAsRead">
+        UPDATE chat_message SET is_read = 1
+        WHERE receiver_id = #{receiverId} AND sender_id = #{senderId} AND is_read = 0
+    </update>
+
+    <update id="deleteMessage">
+        UPDATE chat_message SET is_deleted = 1
+        WHERE id = #{id} AND (sender_id = #{userId} OR receiver_id = #{userId})
+    </update>
+
+    <select id="getUnreadCount" resultType="int">
+        SELECT COUNT(*) FROM chat_message
+        WHERE receiver_id = #{receiverId} AND is_read = 0 AND is_deleted = 0
+    </select>
+
+    <select id="getUnreadCountFromUser" resultType="int">
+        SELECT COUNT(*) FROM chat_message
+        WHERE receiver_id = #{receiverId} AND sender_id = #{senderId} AND is_read = 0 AND is_deleted = 0
+    </select>
+
+    <select id="findMessageByUniqueKey" resultMap="ChatMessageResult">
+        SELECT * FROM chat_message
+        WHERE sender_id = #{senderId}
+          AND receiver_id = #{receiverId}
+          AND content = #{content}
+          AND create_time >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <update id="hideConversationFromUser">
+        UPDATE chat_message
+        SET hidden_by = CONCAT(IFNULL(hidden_by, ''), #{userId}, ',')
+        WHERE (sender_id = #{otherUserId} AND receiver_id = #{userId})
+           OR (sender_id = #{userId} AND receiver_id = #{otherUserId})
+        AND (hidden_by IS NULL OR hidden_by NOT LIKE CONCAT('%,', #{userId}, ',%'))
+    </update>
+
+    <update id="hideMessagesForUser">
+        UPDATE chat_message
+        SET hidden_by = CONCAT(IFNULL(hidden_by, ''), #{userId}, ',')
+        WHERE ((sender_id = #{otherUserId} AND receiver_id = #{userId})
+               OR (sender_id = #{userId} AND receiver_id = #{otherUserId}))
+        AND (hidden_by IS NULL OR hidden_by NOT LIKE CONCAT('%,', #{userId}, ',%'))
+    </update>
+
+</mapper>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.ai.mapper.RagDocumentMapper">
+    
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rag_document (knowledge_base_id, user_id, file_name, file_type, 
+            file_size, file_path, raw_content, chunk_count, status, error_msg)
+        VALUES (#{knowledgeBaseId}, #{userId}, #{fileName}, #{fileType},
+            #{fileSize}, #{filePath}, #{rawContent}, #{chunkCount}, #{status}, #{errorMsg})
+    </insert>
+    
+    <select id="selectById" resultType="com.openstudy.ai.domain.RagDocument">
+        SELECT * FROM rag_document WHERE id = #{id}
+    </select>
+    
+    <select id="selectByKnowledgeBaseId" resultType="com.openstudy.ai.domain.RagDocument">
+        SELECT * FROM rag_document WHERE knowledge_base_id = #{knowledgeBaseId}
+        ORDER BY create_time DESC
+    </select>
+    
+    <update id="update">
+        UPDATE rag_document
+        SET file_name = #{fileName}, raw_content = #{rawContent},
+            chunk_count = #{chunkCount}, status = #{status}, 
+            error_msg = #{errorMsg}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="deleteById">
+        DELETE FROM rag_document WHERE id = #{id}
+    </delete>
+    
+    <select id="selectByStatus" resultType="com.openstudy.ai.domain.RagDocument">
+        SELECT id, knowledge_base_id, user_id, file_name, file_type,
+               file_size, file_path, raw_content, chunk_count, status, error_msg,
+               create_time, update_time
+        FROM rag_document
+        WHERE status = #{status}
+        ORDER BY create_time ASC
+    </select>
+    
+    <select id="selectByIds" resultType="com.openstudy.ai.domain.RagDocument">
+        SELECT * FROM rag_document WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    
+</mapper>

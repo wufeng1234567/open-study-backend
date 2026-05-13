@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.ai.mapper.RagQaRecordMapper">
+
+    <resultMap id="RagQaRecordResult" type="com.openstudy.ai.domain.RagQaRecord">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="knowledgeBaseId" column="knowledge_base_id"/>
+        <result property="question" column="question"/>
+        <result property="answer" column="answer"/>
+        <result property="durationMs" column="duration_ms"/>
+        <result property="feedback" column="feedback"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rag_qa_record (user_id, knowledge_base_id, question, answer, duration_ms, feedback)
+        VALUES (#{userId}, #{knowledgeBaseId}, #{question}, #{answer}, #{durationMs}, #{feedback})
+    </insert>
+
+    <select id="selectByKnowledgeBaseId" resultMap="RagQaRecordResult">
+        SELECT id, user_id, knowledge_base_id, question, answer, duration_ms, feedback, create_time
+        FROM rag_qa_record
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+        ORDER BY create_time DESC
+        LIMIT 50
+    </select>
+
+    <delete id="deleteByKnowledgeBaseId">
+        DELETE FROM rag_qa_record
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+    </delete>
+
+</mapper>

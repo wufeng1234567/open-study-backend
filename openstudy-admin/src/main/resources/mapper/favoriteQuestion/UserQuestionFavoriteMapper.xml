@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.favoriteQuestion.mapper.UserQuestionFavoriteMapper">
+
+    <resultMap type="UserQuestionFavorite" id="UserQuestionFavoriteResult">
+        <result property="favoriteId"    column="favorite_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="questionId"    column="question_id"    />
+        <result property="bankId"    column="bank_id"    />
+        <result property="notes"    column="notes"    />
+        <result property="tags"    column="tags"    />
+        <result property="difficultyRating"    column="difficulty_rating"    />
+        <result property="errorTimes"    column="error_times"    />
+        <result property="correctTimes"    column="correct_times"    />
+        <result property="lastReviewTime"    column="last_review_time"    />
+        <result property="nextReviewTime"    column="next_review_time"    />
+        <result property="reviewCount"    column="review_count"    />
+        <result property="isStarred"    column="is_starred"    />
+        <result property="favoriteStatus"    column="favorite_status"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectUserQuestionFavoriteVo">
+        select favorite_id, user_id, question_id, bank_id, notes, tags, difficulty_rating, error_times, correct_times, last_review_time, next_review_time, review_count, is_starred, favorite_status, create_time, update_time from user_question_favorite
+    </sql>
+
+    <select id="selectUserQuestionFavoriteList" parameterType="UserQuestionFavorite" resultMap="UserQuestionFavoriteResult">
+        <include refid="selectUserQuestionFavoriteVo"/>
+        <where>
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="questionId != null "> and question_id = #{questionId}</if>
+            <if test="bankId != null "> and bank_id = #{bankId}</if>
+            <if test="notes != null  and notes != ''"> and notes = #{notes}</if>
+            <if test="tags != null  and tags != ''"> and tags = #{tags}</if>
+            <if test="difficultyRating != null "> and difficulty_rating = #{difficultyRating}</if>
+            <if test="errorTimes != null "> and error_times = #{errorTimes}</if>
+            <if test="correctTimes != null "> and correct_times = #{correctTimes}</if>
+            <if test="lastReviewTime != null "> and last_review_time = #{lastReviewTime}</if>
+            <if test="nextReviewTime != null "> and next_review_time = #{nextReviewTime}</if>
+            <if test="reviewCount != null "> and review_count = #{reviewCount}</if>
+            <if test="isStarred != null "> and is_starred = #{isStarred}</if>
+            <if test="favoriteStatus != null "> and favorite_status = #{favoriteStatus}</if>
+        </where>
+    </select>
+
+    <select id="selectUserQuestionFavoriteByFavoriteId" parameterType="Long" resultMap="UserQuestionFavoriteResult">
+        <include refid="selectUserQuestionFavoriteVo"/>
+        where favorite_id = #{favoriteId}
+    </select>
+
+    <!-- 检查题目是否存在 -->
+    <select id="checkQuestionExists" parameterType="Long" resultType="int">
+        SELECT COUNT(1) FROM question_main WHERE id = #{questionId}
+    </select>
+
+    <!-- 检查是否已收藏题目 -->
+    <select id="checkFavoriteExists" resultType="int">
+        SELECT COUNT(1)
+        FROM user_question_favorite
+        WHERE user_id = #{userId}
+        AND question_id = #{questionId}
+        <if test="excludeFavoriteId != null">
+            AND favorite_id != #{excludeFavoriteId}
+        </if>
+    </select>
+
+    <insert id="insertUserQuestionFavorite" parameterType="UserQuestionFavorite" useGeneratedKeys="true" keyProperty="favoriteId">
+        insert into user_question_favorite
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="questionId != null">question_id,</if>
+            <if test="bankId != null">bank_id,</if>
+            <if test="notes != null">notes,</if>
+            <if test="tags != null">tags,</if>
+            <if test="difficultyRating != null">difficulty_rating,</if>
+            <if test="errorTimes != null">error_times,</if>
+            <if test="correctTimes != null">correct_times,</if>
+            <if test="lastReviewTime != null">last_review_time,</if>
+            <if test="nextReviewTime != null">next_review_time,</if>
+            <if test="reviewCount != null">review_count,</if>
+            <if test="isStarred != null">is_starred,</if>
+            <if test="favoriteStatus != null">favorite_status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="questionId != null">#{questionId},</if>
+            <if test="bankId != null">#{bankId},</if>
+            <if test="notes != null">#{notes},</if>
+            <if test="tags != null">#{tags},</if>
+            <if test="difficultyRating != null">#{difficultyRating},</if>
+            <if test="errorTimes != null">#{errorTimes},</if>
+            <if test="correctTimes != null">#{correctTimes},</if>
+            <if test="lastReviewTime != null">#{lastReviewTime},</if>
+            <if test="nextReviewTime != null">#{nextReviewTime},</if>
+            <if test="reviewCount != null">#{reviewCount},</if>
+            <if test="isStarred != null">#{isStarred},</if>
+            <if test="favoriteStatus != null">#{favoriteStatus},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateUserQuestionFavorite" parameterType="UserQuestionFavorite">
+        update user_question_favorite
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="questionId != null">question_id = #{questionId},</if>
+            <if test="bankId != null">bank_id = #{bankId},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="difficultyRating != null">difficulty_rating = #{difficultyRating},</if>
+            <if test="errorTimes != null">error_times = #{errorTimes},</if>
+            <if test="correctTimes != null">correct_times = #{correctTimes},</if>
+            <if test="lastReviewTime != null">last_review_time = #{lastReviewTime},</if>
+            <if test="nextReviewTime != null">next_review_time = #{nextReviewTime},</if>
+            <if test="reviewCount != null">review_count = #{reviewCount},</if>
+            <if test="isStarred != null">is_starred = #{isStarred},</if>
+            <if test="favoriteStatus != null">favorite_status = #{favoriteStatus},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where favorite_id = #{favoriteId}
+    </update>
+
+    <delete id="deleteUserQuestionFavoriteByFavoriteId" parameterType="Long">
+        delete from user_question_favorite where favorite_id = #{favoriteId}
+    </delete>
+
+    <delete id="deleteUserQuestionFavoriteByFavoriteIds" parameterType="String">
+        delete from user_question_favorite where favorite_id in
+        <foreach item="favoriteId" collection="array" open="(" separator="," close=")">
+            #{favoriteId}
+        </foreach>
+    </delete>
+
+    <!-- 根据题目ID获取题库ID -->
+    <select id="getQuestionBankIdByQuestionId" parameterType="Long" resultType="Long">
+        SELECT bank_id
+        FROM question_main
+        WHERE id = #{questionId}
+    </select>
+</mapper>

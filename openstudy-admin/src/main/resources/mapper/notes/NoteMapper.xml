@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.notes.mapper.NoteMapper">
+
+    <resultMap type="Note" id="NoteResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="authorName"    column="author_name"    />
+        <result property="avatar"    column="avatar"    />
+        <result property="categoryId"    column="category_id"    />
+        <result property="title"    column="title"    />
+        <result property="filename"    column="filename"    />
+        <result property="markdownContent"    column="markdown_content"    />
+        <result property="wordCount"    column="word_count"    />
+        <result property="tags"    column="tags"    />
+        <result property="isPublic"    column="is_public"    />
+        <result property="status"    column="status"    />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="publicSectionId"    column="public_section_id"    />
+        <result property="sectionName"    column="section_name"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="clickCount"    column="click_count"    />
+        <result property="clickDate"    column="click_date"    />
+    </resultMap>
+
+    <sql id="selectNoteVo">
+        select n.id, n.user_id, n.category_id, n.title, n.filename,
+               n.markdown_content, n.word_count, n.tags, n.is_public,
+               n.status, n.sort_order, n.public_section_id, n.create_time, n.update_time,
+               u.nick_name as author_name,
+               u.avatar,
+               s.name as section_name
+        from note n
+        left join sys_user u on n.user_id = u.user_id
+        left join note_public_section s on n.public_section_id = s.id
+    </sql>
+
+    <select id="selectNoteList" parameterType="Note" resultMap="NoteResult">
+        select temp.*,
+               COALESCE((select count(*) from note_click_record 
+                   where note_id = temp.id
+                   <if test="startTime != null and startTime != ''"> and create_time &gt;= #{startTime}</if>
+                   <if test="endTime != null and endTime != ''"> and create_time &lt;= #{endTime}</if>
+               ), 0) as click_count
+        from (
+            <include refid="selectNoteVo"/>
+        ) temp
+        <where>
+            <if test="userId != null "> and temp.user_id = #{userId}</if>
+            <if test="categoryId != null "> and temp.category_id = #{categoryId}</if>
+            <if test="title != null  and title != ''"> 
+                and (temp.title like concat('%', #{title}, '%') 
+                or temp.markdown_content like concat('%', #{title}, '%')
+                or temp.author_name like concat('%', #{title}, '%')
+                or temp.tags like concat('%', #{title}, '%'))
+            </if>
+            <if test="isPublic != null "> and temp.is_public = #{isPublic}</if>
+            <if test="publicSectionId != null "> and temp.public_section_id = #{publicSectionId}</if>
+            <if test="status != null  and status != ''"> and temp.status = #{status}</if>
+            <if test="startTime != null and startTime != ''"> and temp.create_time &gt;= #{startTime}</if>
+            <if test="endTime != null and endTime != ''"> and temp.create_time &lt;= #{endTime}</if>
+        </where>
+        <if test="sortBy != null and sortBy != ''">
+            order by 
+            <choose>
+                <when test="sortBy == 'click_count'">click_count</when>
+                <when test="sortBy == 'content_length'">temp.word_count</when>
+                <when test="sortBy == 'word_count'">temp.word_count</when>
+                <when test="sortBy == 'title'">temp.title</when>
+                <otherwise>temp.create_time</otherwise>
+            </choose>
+            <if test="order == 'asc'">asc</if>
+            <if test="order == 'desc'">desc</if>
+        </if>
+    </select>
+    
+    <select id="selectNoteById" parameterType="Long" resultMap="NoteResult">
+        <include refid="selectNoteVo"/>
+        where n.id = #{id}
+    </select>
+
+    <insert id="insertNote" parameterType="Note" useGeneratedKeys="true" keyProperty="id">
+        insert into note
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="categoryId != null">category_id,</if>
+            <if test="title != null and title != ''">title,</if>
+            <if test="filename != null and filename != ''">filename,</if>
+            <if test="markdownContent != null">markdown_content,</if>
+            <if test="wordCount != null">word_count,</if>
+            <if test="tags != null">tags,</if>
+            <if test="isPublic != null">is_public,</if>
+            <if test="publicSectionId != null">public_section_id,</if>
+            <if test="status != null">status,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="categoryId != null">#{categoryId},</if>
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="filename != null and filename != ''">#{filename},</if>
+            <if test="markdownContent != null">#{markdownContent},</if>
+            <if test="wordCount != null">#{wordCount},</if>
+            <if test="tags != null">#{tags},</if>
+            <if test="isPublic != null">#{isPublic},</if>
+            <if test="publicSectionId != null">#{publicSectionId},</if>
+            <if test="status != null">#{status},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateNote" parameterType="Note">
+        update note
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="filename != null and filename != ''">filename = #{filename},</if>
+            <if test="markdownContent != null">markdown_content = #{markdownContent},</if>
+            <if test="wordCount != null">word_count = #{wordCount},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="isPublic != null">is_public = #{isPublic},</if>
+            <if test="publicSectionId != null">public_section_id = #{publicSectionId},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteNoteById" parameterType="Long">
+        delete from note where id = #{id}
+    </delete>
+
+    <delete id="deleteNoteByIds" parameterType="String">
+        delete from note where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 查询公开笔记榜单 -->
+    <select id="selectRankingList" resultMap="NoteResult">
+        SELECT n.id, n.user_id, n.category_id, n.title, n.filename,
+               n.markdown_content, n.word_count, n.tags, n.is_public,
+               n.status, n.sort_order, n.create_time, n.update_time,
+               u.nick_name as author_name,
+               u.avatar,
+               COALESCE(c.click_count, 0) as click_count
+        FROM note n
+        LEFT JOIN sys_user u ON n.user_id = u.user_id
+        LEFT JOIN (
+            SELECT note_id, COUNT(*) as click_count
+            FROM note_click_record
+            <where>
+                <if test="type == 'today'">
+                    AND DATE(create_time) = CURDATE()
+                </if>
+                <if test="type == 'week'">
+                    AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                </if>
+            </where>
+            GROUP BY note_id
+        ) c ON n.id = c.note_id
+        WHERE n.is_public = 1
+        ORDER BY click_count DESC, n.update_time DESC
+        LIMIT #{limit}
+    </select>
+</mapper>
