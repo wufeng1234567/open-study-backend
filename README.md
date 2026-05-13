@@ -21,9 +21,52 @@
 
 ---
 
-## 技术栈
+## 系统架构
 
-### 后端技术
+### 前后端分离架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        用户浏览器                            │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Vue 3 前端 (Port 80)                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                    /front/*                          │   │
+│  │  前台用户界面 - 首页、题库、笔记、学习、工具等          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                    /index/*                          │   │
+│  │  后台管理界面 - 用户、角色、菜单、系统监控等           │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                     Proxy: /dev-api/* → :8086
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Spring Boot 3 后端 (Port 8086)             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  AI 模块      │  │  题库模块     │  │  笔记模块     │      │
+│  │  - AI聊天     │  │  - 题库管理   │  │  - 笔记编辑   │      │
+│  │  - AI出题     │  │  - 刷题练习   │  │  - 笔记广场   │      │
+│  │  - OCR识别    │  │  - 错题本     │  │  - 公开分享   │      │
+│  │  - RAG知识库  │  │  - 收藏斩题   │  │  - 评论互动   │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  学习模块     │  │  英语学习     │  │  工具箱       │      │
+│  │  - 我的学习   │  │  - 拍照识词   │  │  - 图片水印   │      │
+│  │  - 收藏管理   │  │  - 词汇管理   │  │  - 文档转换   │      │
+│  │  - 排行榜     │  │  - 听力练习   │  │  - 图片处理   │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 技术栈
+
+#### 后端技术
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
@@ -36,7 +79,7 @@
 | JWT | 0.9.1 | Token 认证 |
 | Druid | 1.2.28 | 数据库连接池 |
 
-### 前端技术
+#### 前端技术
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
@@ -46,7 +89,7 @@
 | Pinia | - | 状态管理 |
 | Vue Router | - | 路由管理 |
 
-### AI 能力
+#### AI 能力
 
 | 服务 | 模型 | 用途 |
 |------|------|------|
@@ -118,12 +161,82 @@
 
 ---
 
+## 页面路由
+
+### 前台用户页面
+
+| 路径 | 功能 |
+|------|------|
+| `/front/index` | 前台首页 |
+| `/front/questionPractice` | 题库练习 |
+| `/front/questionPractice/:bankId` | 题库详情 |
+| `/front/questionPractice/:bankId/practice/:moduleType` | 刷题练习 |
+| `/front/myQuestion` | 我的学习 |
+| `/front/myQuestion/myBank` | 我的题库 |
+| `/front/myQuestion/bankCollect` | 题库收藏 |
+| `/front/myQuestion/questionCollect` | 题目收藏 |
+| `/front/myQuestion/wrongQuestion` | 我的错题 |
+| `/front/myQuestion/masteredQuestion` | 我的斩题 |
+| `/front/myQuestion/myNotes` | 我的笔记 |
+| `/front/english` | 英语学习 |
+| `/front/knowledge` | 知识库 |
+| `/front/notes` | 学习分享 |
+| `/front/tools` | 实用工具箱 |
+| `/front/studio` | 上传题库 |
+| `/front/messages` | 消息中心 |
+| `/front/profile` | 个人中心 |
+
+### 后台管理页面
+
+| 路径 | 功能 |
+|------|------|
+| `/index/home` | 后台首页 |
+| `/system/user` | 用户管理 |
+| `/system/role` | 角色管理 |
+| `/system/menu` | 菜单管理 |
+| `/system/dept` | 部门管理 |
+| `/system/dict` | 字典管理 |
+| `/system/config` | 参数管理 |
+| `/system/notice` | 通知公告 |
+| `/monitor/online` | 在线用户 |
+| `/monitor/operlog` | 操作日志 |
+| `/monitor/logininfor` | 登录日志 |
+| `/tool/gen` | 代码生成 |
+
+### 认证页面
+
+| 路径 | 功能 |
+|------|------|
+| `/login` | 登录页面 |
+| `/register` | 注册页面 |
+
+---
+
 ## 项目结构
 
 ```
 OpenStudy/
 ├── openstudy-server-springboot3/          # 后端项目
 │   ├── openstudy-admin/                    # 后台管理模块
+│   │   └── src/main/java/com/openstudy/
+│   │       ├── ai/                        # AI 智能模块
+│   │       │   ├── controller/            # AI 控制器
+│   │       │   ├── service/               # AI 服务层
+│   │       │   ├── infra/                 # AI 基础设施
+│   │       │   └── rag/                   # RAG 知识库
+│   │       ├── questionBank/              # 题库管理模块
+│   │       ├── questionMain/              # 题目主体模块
+│   │       ├── questionError/              # 错题本模块
+│   │       ├── questionMarked/            # 斩题标记模块
+│   │       ├── favoriteQuestion/          # 题目收藏模块
+│   │       ├── favoriteBank/              # 题库收藏模块
+│   │       ├── notes/                      # 笔记模块
+│   │       ├── favoriteNote/              # 笔记收藏模块
+│   │       ├── ocr/                       # OCR 识别模块
+│   │       ├── courses/                   # 课程模块
+│   │       ├── carousel/                  # 轮播图模块
+│   │       ├── document/                  # 文档转换模块
+│   │       └── framework/                  # 框架配置
 │   ├── openstudy-framework/               # 框架核心
 │   ├── openstudy-system/                   # 系统功能模块
 │   ├── openstudy-common/                  # 通用工具模块
@@ -134,16 +247,42 @@ OpenStudy/
 └── openstudy-vue3/                        # 前端项目
     └── src/
         ├── api/                           # API 接口封装
+        │   ├── ai/                        # AI 相关接口
+        │   ├── questionBank/              # 题库接口
+        │   ├── favoriteQuestion/          # 收藏接口
+        │   ├── favoriteBank/             # 题库收藏接口
+        │   ├── notes/                    # 笔记接口
+        │   └── ...
         ├── assets/                        # 静态资源
         ├── components/                    # 公共组件
+        │   ├── AiAssistant/              # AI 悬浮助手
+        │   ├── BankCardList/             # 题库卡片列表
+        │   ├── BankCardGrid/             # 题库卡片网格
+        │   ├── FavoriteButton/           # 收藏按钮
+        │   └── PracticeComponent/        # 刷题组件
         ├── composables/                   # 组合式函数
+        ├── layout/                        # 布局组件
+        │   ├── index.vue                  # 后台布局
+        │   └── front.vue                  # 前台布局
         ├── router/                       # 路由配置
         ├── store/                        # Pinia 状态管理
         ├── utils/                        # 工具函数
         └── views/                        # 页面组件
-            ├── admin/                    # 后台管理页面
+            ├── admin/                    # 后台首页
             ├── front/                    # 前台用户页面
-            └── system/                   # 系统配置页面
+            │   ├── index.vue             # 前台首页
+            │   ├── myQuestion/           # 我的学习
+            │   ├── questionPractice/     # 题库练习
+            │   ├── notes/               # 学习分享
+            │   ├── knowledge/           # 知识库
+            │   ├── english/             # 英语学习
+            │   ├── tools/              # 实用工具
+            │   ├── studio/             # 题库搭建
+            │   └── messages/           # 消息中心
+            ├── system/                 # 系统配置页面
+            ├── monitor/                # 系统监控页面
+            ├── login.vue               # 登录页面
+            └── register.vue            # 注册页面
 ```
 
 ---
@@ -156,6 +295,13 @@ OpenStudy/
 - Node.js 16+
 - MySQL 8.0+
 - Redis 6.0+
+
+### 数据库初始化
+
+```bash
+# 创建数据库
+mysql -u root -p < sql/open_study.sql
+```
 
 ### 后端启动
 
@@ -175,13 +321,17 @@ pnpm dev
 
 ### 访问地址
 
-- 前台首页：http://localhost
-- 后台管理：http://localhost/#/login
-- 默认账号：admin / admin123
+| 页面 | 地址 | 说明 |
+|------|------|------|
+| 前台首页 | http://localhost | 学习平台主页 |
+| 登录页面 | http://localhost/login | 用户登录 |
+| 注册页面 | http://localhost/register | 用户注册 |
+| 后台管理 | http://localhost/#/login | 系统后台 |
 
----
+- 默认账号：`admin`
+- 默认密码：`admin123`
 
-## API 接口
+### API 文档
 
 项目提供完整的 RESTful API，支持 Swagger 文档在线查看：
 
@@ -195,6 +345,7 @@ http://localhost:8086/swagger-ui.html
 
 - **AI 赋能学习**：深度集成 Spring AI，实现智能出题、问答、OCR 识别
 - **前后端分离**：基于 Vue 3 + Spring Boot 3 的现代化架构
+- **前后台一体**：前台和后台共用同一前端端口，通过路由区分
 - **响应式设计**：适配桌面端和移动端多种设备
 - **组件化开发**：丰富的可复用组件，提升开发效率
 - **权限精细控制**：基于 RBAC 模型的细粒度权限管理
