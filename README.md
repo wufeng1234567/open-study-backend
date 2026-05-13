@@ -21,6 +21,13 @@
 
 **OpenStudy** 是一个功能丰富的在线学习平台，基于 Spring AI 框架开发，融合了智能刷题、知识分享、社区互动等核心功能。平台支持 AI 智能出题、OCR 拍照识别、RAG 知识库问答等前沿技术，为用户提供全新的智能化学习体验。
 
+### 项目仓库
+
+| 项目 | 地址 |
+|------|------|
+| 后端 | https://github.com/wufeng1234567/open-study-backend |
+| 前端 | https://github.com/wufeng1234567/open-study-frontend |
+
 ---
 
 ## 系统架构
