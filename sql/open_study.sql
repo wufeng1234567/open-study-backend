@@ -1904,12 +1904,6 @@ CREATE TABLE `sys_ai_config`  (
   INDEX `idx_user_default`(`user_id` ASC, `is_default` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'AI模型配置表' ROW_FORMAT = Dynamic;
 
--- ----------------------------
--- Records of sys_ai_config
--- ----------------------------
-INSERT INTO `sys_ai_config` VALUES (1, NULL, 'zhipuai', '智谱AI', 'glm-4-plus', NULL, NULL, 1, 1, '0', '系统默认配置', 'auto', 'high', '32k', '2026-05-02 19:39:32', '2026-05-02 19:39:32', '', '');
-INSERT INTO `sys_ai_config` VALUES (6, 1, 'deepseek', 'DeepSeek', 'deepseek-v4-flash', 'sk-9faf0a401d844fa38379396df6b8cd06', '', 1, 1, '0', '', 'disabled', 'high', '32k', '2026-05-03 14:08:20', '2026-05-03 21:47:28', 'admin', 'admin');
-INSERT INTO `sys_ai_config` VALUES (7, 1, 'siliconflow', '硅基流动', 'Qwen/Qwen3.6-27B', 'sk-pikpxeczcyelcvsayotuucdjooyecuwtumxzupuuskagxecd', '', 0, 1, '0', '', 'auto', 'high', '32k', '2026-05-03 14:13:41', '2026-05-03 14:17:51', 'admin', 'admin');
 
 -- ----------------------------
 -- Table structure for sys_config
