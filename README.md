@@ -7,6 +7,8 @@
 <h4 align="center">基于 Spring AI 的智能学习与知识分享平台</h4>
 
 <p align="center">
+  <a href="https://github.com/wufeng1234567/open-study-backend"><img src="https://img.shields.io/badge/GitHub-Backend-blue.svg"></a>
+  <a href="https://github.com/wufeng1234567/open-study-frontend"><img src="https://img.shields.io/badge/GitHub-Frontend-green.svg"></a>
   <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Spring%20Boot-3.5.11-brightgreen.svg"></a>
   <a href="https://spring.io/projects/spring-ai"><img src="https://img.shields.io/badge/Spring%20AI-1.0.0--M5-blue.svg"></a>
   <a href="https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html"><img src="https://img.shields.io/badge/JDK-17-orange.svg"></a>
