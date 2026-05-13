@@ -295,6 +295,39 @@ OpenStudy/
 - Node.js 16+
 - MySQL 8.0+
 - Redis 6.0+
+- Docker Desktop（可选）
+
+### Docker 环境配置
+
+#### Windows Docker Desktop 镜像加速
+
+Docker Desktop 设置 → Docker Engine → 编辑配置文件：
+
+```json
+{
+  "debug": true,
+  "experimental": false,
+  "registry-mirrors": [
+    "https://docker.1ms.run",
+    "https://docker.m.daocloud.io",
+    "https://lispy.org",
+    "https://docker-0.unsee.tech",
+    "https://docker.xuanyuan.me"
+  ]
+}
+```
+
+#### Redis Stack 安装
+
+本项目使用 Redis Stack 提供向量数据库支持（规划中）：
+
+```bash
+# 拉取镜像
+docker pull redis/redis-stack
+
+# 启动容器
+docker run -d --name redis-stack -p 6379:6379 redis/redis-stack:latest
+```
 
 ### 数据库初始化
 
@@ -349,6 +382,14 @@ http://localhost:8086/swagger-ui.html
 - **响应式设计**：适配桌面端和移动端多种设备
 - **组件化开发**：丰富的可复用组件，提升开发效率
 - **权限精细控制**：基于 RBAC 模型的细粒度权限管理
+
+---
+
+## 安全警告
+
+> **重要提示**：本系统支持用户自行添加和配置 AI 模型 API。关于用户自己配置 AI 模型的功能，系统未对 `sys_ai_config` 表中的 SQL 数据进行加密存储。
+> 
+> 在上传或分享 SQL 文件时，请务必小心，**不要将 `sys_ai_config` 表中的敏感数据（如 API Key、模型配置等）泄露出去**。建议在导出 SQL 前，先清空或脱敏该表数据。
 
 ---
 
