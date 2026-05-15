@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openstudy.system.mapper.SysDashboardMapper">
+
+    <!-- 查询用户总数 -->
+    <select id="selectUserCount" resultType="int">
+        SELECT COUNT(*) FROM sys_user WHERE del_flag = '0'
+    </select>
+
+    <!-- 查询题库总数 -->
+    <select id="selectQuestionBankCount" resultType="int">
+        SELECT COUNT(*) FROM question_bank WHERE status = '0'
+    </select>
+
+    <!-- 查询题目总数 -->
+    <select id="selectQuestionCount" resultType="int">
+        SELECT COUNT(*) FROM question_main WHERE status = '0'
+    </select>
+
+    <!-- 查询笔记总数 -->
+    <select id="selectNoteCount" resultType="int">
+        SELECT COUNT(*) FROM note WHERE status = '0'
+    </select>
+
+    <!-- 题库分类统计 -->
+    <select id="selectCategoryStats" resultType="java.util.Map">
+        SELECT
+            subject AS name,
+            COUNT(*) AS value
+        FROM question_bank
+        WHERE status = '0' AND subject IS NOT NULL AND subject != ''
+        GROUP BY subject
+        ORDER BY value DESC
+    </select>
+
+    <!-- 用户增长趋势（近7天） -->
+    <select id="selectUserGrowth" resultType="java.util.Map">
+        SELECT
+            DATE_FORMAT(create_time, '%m-%d') AS dates,
+            COUNT(*) AS counts
+        FROM sys_user
+        WHERE del_flag = '0'
+          AND create_time >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        GROUP BY DATE_FORMAT(create_time, '%m-%d')
+        ORDER BY dates ASC
+    </select>
+
+</mapper>
