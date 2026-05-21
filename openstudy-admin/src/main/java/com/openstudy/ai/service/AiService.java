@@ -2,7 +2,6 @@ package com.openstudy.ai.service;
 
 import com.openstudy.ai.service.infra.AiClient;
 import com.openstudy.ai.service.infra.AiClientManager;
-import com.openstudy.system.domain.SysAiConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -149,21 +148,13 @@ public class AiService {
 
     /**
      * 根据用户ID和提供商获取客户端
-     * 优先使用用户自定义配置
+     * 优先使用用户对该提供商的自定义配置
      */
     private AiClient getClient(String provider, Long userId) {
-        // 如果指定了用户ID，优先使用用户的有效配置
-        if (userId != null) {
-            SysAiConfig config = aiConfigService.getEffectiveConfig(userId);
-            if (config != null) {
-                return aiConfigService.getClientByConfig(config);
-            }
-        }
-
-        // 否则使用指定的提供商或默认
         if (provider == null || provider.isEmpty()) {
             provider = "zhipuai";
         }
-        return clientManager.getClient(provider);
+        // 优先查找用户对该 provider 的自定义配置
+        return aiConfigService.getClient(provider, userId);
     }
 }

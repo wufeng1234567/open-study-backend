@@ -47,7 +47,7 @@ public class DynamicAiClient implements AiClient {
     }
 
     public DynamicAiClient(String provider, String apiKey, String baseUrl, String model,
-                           String thinkingMode, String reasoningEffort, String contextLength) {
+            String thinkingMode, String reasoningEffort, String contextLength) {
         this.provider = provider;
         this.apiKey = apiKey;
         this.baseUrl = baseUrl;
@@ -89,6 +89,7 @@ public class DynamicAiClient implements AiClient {
     @Override
     public Flux<String> chatStream(String systemPrompt, String userMessage) {
         return Flux.create(sink -> {
+            // 将数据提交到独立的线程池，避免阻塞主线程
             executor.submit(() -> {
                 try {
                     doStreamRequest(systemPrompt, userMessage, sink);
@@ -144,14 +145,33 @@ public class DynamicAiClient implements AiClient {
             if (!extraBody.isEmpty()) {
                 requestBody.put("extra_body", extraBody);
             }
+            log.info("DeepSeek 请求体: {}", requestBody.toJSONString());
+        } else if ("siliconflow".equalsIgnoreCase(provider)) {
+            if (thinkingMode != null && !thinkingMode.isEmpty()) {
+                boolean enableThinking = !"disabled".equals(thinkingMode);
+                requestBody.put("enable_thinking", enableThinking);
+                log.info("SiliconFlow 思考模式: {}", enableThinking);
+            }
         }
 
         HttpURLConnection connection = (HttpURLConnection) new URL(apiUrl).openConnection();
+
+        // 设置请求方法为 POST（用于向 AI 发送数据）
         connection.setRequestMethod("POST");
+
+        // 设置请求头 Content-Type 为 application/json，表明发送的数据是 JSON 格式
         connection.setRequestProperty("Content-Type", "application/json");
+
+        // 设置 Authorization 请求头，使用 Bearer 方式传递 API Key，用于身份验证
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+
+        // 启用输出流，允许向连接中写入数据（即发送请求体）
         connection.setDoOutput(true);
+
+        // 设置连接建立超时时间为 30 秒（超过此时间未建立连接则抛出异常）
         connection.setConnectTimeout(30000);
+
+        // 设置读取响应超时时间为 120 秒（从服务器读取数据时，超过此时间无数据则抛出异常）
         connection.setReadTimeout(120000);
 
         try (OutputStream os = connection.getOutputStream()) {
@@ -167,6 +187,8 @@ public class DynamicAiClient implements AiClient {
                     new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
                 StringBuilder response = new StringBuilder();
                 String line;
+                // 因为响应的json数据可能也是不完整的 分块的，所以需要进入
+                // 循环读取响应，直到读取到 null 为止
                 while ((line = br.readLine()) != null) {
                     response.append(line);
                 }
@@ -181,7 +203,9 @@ public class DynamicAiClient implements AiClient {
         }
     }
 
+    // 获取ai模型的流式响应
     private void doStreamRequest(String systemPrompt, String userMessage, FluxSink<String> sink) {
+        HttpURLConnection connection = null;
         try {
             List<Map<String, String>> messages = new ArrayList<>();
             if (systemPrompt != null && !systemPrompt.isEmpty()) {
@@ -196,17 +220,42 @@ public class DynamicAiClient implements AiClient {
             messages.add(userMsg);
 
             String apiUrl = getApiUrl();
+            log.info("DynamicAiClient 流式请求，URL: {}, Provider: {}, Model: {}", apiUrl, provider, model);
+
             JSONObject requestBody = new JSONObject();
             requestBody.put("model", model);
             requestBody.put("messages", messages);
             requestBody.put("temperature", 0.7);
-            requestBody.put("max_tokens", 2048);
+            requestBody.put("max_tokens", 4096);
             requestBody.put("stream", true);
 
-            HttpURLConnection connection = (HttpURLConnection) new URL(apiUrl).openConnection();
+            if ("deepseek".equalsIgnoreCase(provider)) {
+                JSONObject extraBody = new JSONObject();
+                if (thinkingMode != null && !thinkingMode.isEmpty() && !"auto".equals(thinkingMode)) {
+                    JSONObject thinking = new JSONObject();
+                    thinking.put("type", thinkingMode);
+                    extraBody.put("thinking", thinking);
+                }
+                if (reasoningEffort != null && !reasoningEffort.isEmpty()) {
+                    requestBody.put("reasoning_effort", reasoningEffort);
+                }
+                if (!extraBody.isEmpty()) {
+                    requestBody.put("extra_body", extraBody);
+                }
+                log.info("DeepSeek 流式请求体: {}", requestBody.toJSONString());
+            } else if ("siliconflow".equalsIgnoreCase(provider)) {
+                if (thinkingMode != null && !thinkingMode.isEmpty()) {
+                    boolean enableThinking = !"disabled".equals(thinkingMode);
+                    requestBody.put("enable_thinking", enableThinking);
+                    log.info("SiliconFlow 流式请求 思考模式: {}", enableThinking);
+                }
+            }
+
+            connection = (HttpURLConnection) new URL(apiUrl).openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+            connection.setRequestProperty("Accept", "text/event-stream");
             connection.setDoOutput(true);
             connection.setConnectTimeout(30000);
             connection.setReadTimeout(120000);
@@ -217,15 +266,28 @@ public class DynamicAiClient implements AiClient {
             }
 
             int responseCode = connection.getResponseCode();
+            log.info("DynamicAiClient 流式响应码: {}", responseCode);
+
             if (responseCode == HttpURLConnection.HTTP_OK) {
+                // 创建流式响应读取器BufferedReader
                 try (BufferedReader reader = new BufferedReader(
+
                         new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
                     String line;
+                    // 循环读取响应行，直到遇到 "[DONE]"
                     while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("data: ")) {
-                            String data = line.substring(6).trim();
+                        // 跳过空行
+                        if (line.trim().isEmpty()) {
+                            continue;
+                        }
+                        // 处理 SSE data 行（兼容有无空格: "data: {...}" 或 "data:{...}"）
+                        if (line.startsWith("data:")) {
+                            String data = line.substring(5).trim();
                             if ("[DONE]".equals(data)) {
                                 break;
+                            }
+                            if (data.isEmpty()) {
+                                continue;
                             }
                             String content = extractContentFromStreamData(data);
                             if (content != null && !content.isEmpty()) {
@@ -237,11 +299,16 @@ public class DynamicAiClient implements AiClient {
                 sink.complete();
             } else {
                 String errorResponse = readErrorStream(connection);
-                sink.error(new RuntimeException("AI服务响应异常: " + errorResponse));
+                log.error("DynamicAiClient 流式请求失败，响应码: {}, 错误: {}", responseCode, errorResponse);
+                sink.error(new RuntimeException("AI服务响应异常 (" + responseCode + "): " + errorResponse));
             }
         } catch (Exception e) {
-            log.error("DynamicAiClient 流式调用失败", e);
+            log.error("DynamicAiClient 流式调用失败: {}", e.getMessage(), e);
             sink.error(e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 
@@ -251,21 +318,35 @@ public class DynamicAiClient implements AiClient {
             if (!url.endsWith("/")) {
                 url += "/";
             }
-            // OpenAI 兼容格式
-            if (provider != null && provider.equals("zhipuai")) {
+
+            // 智谱AI
+            if ("zhipuai".equalsIgnoreCase(provider)) {
+                // 如果用户已经填了完整路径（包含 /v4/），直接拼 chat/completions
+                if (url.contains("/v4/")) {
+                    return url + "chat/completions";
+                }
                 return url + "v4/chat/completions";
-            } else if (provider != null && provider.equals("deepseek")) {
+            }
+
+            // DeepSeek: 统一使用 /v1/chat/completions
+            if ("deepseek".equalsIgnoreCase(provider)) {
+                // 如果用户填了 https://api.deepseek.com，需要加 /v1/
+                // 如果用户填了 https://api.deepseek.com/v1，直接拼 chat/completions
+                if (url.contains("/v1/")) {
+                    return url + "chat/completions";
+                }
+                return url + "v1/chat/completions";
+            }
+
+            // 硅基流动、OpenAI 及其他: 统一使用 /v1/chat/completions
+            if (url.contains("/v1/")) {
                 return url + "chat/completions";
-            } else if (provider != null && provider.equals("siliconflow")) {
-                return url + "v1/chat/completions";
-            } else if (provider != null && provider.equals("openai")) {
-                return url + "v1/chat/completions";
             }
             return url + "v1/chat/completions";
         }
 
-        // 默认地址
-        switch (provider != null ? provider : "") {
+        // 默认地址（无自定义 baseUrl 时使用）
+        switch (provider != null ? provider.toLowerCase() : "") {
             case "zhipuai":
                 return "https://open.bigmodel.cn/api/paas/v4/chat/completions";
             case "deepseek":

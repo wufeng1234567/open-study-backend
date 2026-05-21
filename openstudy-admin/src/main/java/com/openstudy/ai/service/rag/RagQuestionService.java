@@ -2,6 +2,7 @@ package com.openstudy.ai.service.rag;
 
 import com.openstudy.ai.domain.RagKnowledgeBase;
 import com.openstudy.ai.model.RagAnswerResponse;
+import com.openstudy.ai.service.AiConfigService;
 import com.openstudy.ai.service.RagKnowledgeBaseService;
 import com.openstudy.ai.service.infra.AiClient;
 import com.openstudy.ai.service.infra.AiClientManager;
@@ -26,6 +27,7 @@ public class RagQuestionService {
     private final RagVectorService vectorService;
     private final AiClientManager aiClientManager;
     private final RagKnowledgeBaseService knowledgeBaseService;
+    private final AiConfigService aiConfigService;
 
     @Value("${ai.rag.similarity-threshold:0.65}")
     private Double similarityThreshold;
@@ -213,9 +215,11 @@ public class RagQuestionService {
      *
      * @param question        用户问题
      * @param knowledgeBaseId 知识库ID
+     * @param provider        AI提供商
+     * @param userId          用户ID
      * @return 流式回答（JSON 格式）
      */
-    public Flux<String> askWithStream(String question, Long knowledgeBaseId) {
+    public Flux<String> askWithStream(String question, Long knowledgeBaseId, String provider, Long userId) {
         return Flux.defer(() -> {
             try {
                 long totalStart = System.currentTimeMillis();
@@ -232,7 +236,7 @@ public class RagQuestionService {
                 if (isGreeting(question)) {
                     log.info("✅ 流式问答：检测到通用问候语，使用带知识库信息的 AI 回答");
 
-                    AiClient aiClient = aiClientManager.getClient("zhipuai");
+                    AiClient aiClient = aiConfigService.getClient(provider, userId);
 
                     // 告知 AI 当前知识库
                     Flux<String> contentFlux = aiClient.chatStream(buildSimpleSystemPrompt(currentKBName), question)
@@ -301,7 +305,7 @@ public class RagQuestionService {
                     String contextText = String.join("\n\n", contexts);
                     String systemPrompt = buildSystemPrompt(contextText, currentKBName);
 
-                    AiClient aiClient = aiClientManager.getClient("zhipuai");
+                    AiClient aiClient = aiConfigService.getClient(provider, userId);
 
                     Flux<String> contentFlux = aiClient.chatStream(systemPrompt, question)
                             .map(chunk -> toJson("content", chunk, null));
@@ -324,7 +328,7 @@ public class RagQuestionService {
                                 currentKBName);
                     }
 
-                    AiClient aiClient = aiClientManager.getClient("zhipuai");
+                    AiClient aiClient = aiConfigService.getClient(provider, userId);
 
                     // 告知 AI 当前在哪个知识库
                     Flux<String> contentFlux = aiClient.chatStream(buildSimpleSystemPrompt(currentKBName), question)

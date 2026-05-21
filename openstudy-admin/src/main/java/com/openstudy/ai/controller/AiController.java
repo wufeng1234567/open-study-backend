@@ -437,21 +437,19 @@ public class AiController extends BaseController {
         return success("成功生成 " + addedCount + " 个敏感词");
     }
 
+    // MediaType.TEXT_EVENT_STREAM_VALUE 作用
+    // 在spring中声明，使用SSE格式返回流式数据
     @GetMapping(value = "/assistant/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> assistantStream(
             @RequestParam String message,
             @RequestParam(defaultValue = "zhipuai") String provider,
-            @RequestParam(defaultValue = "assistant") String sessionId) {
+            @RequestParam(defaultValue = "assistant") String sessionId,
+            @RequestParam(defaultValue = "0") Long userId) {
 
-        Long userId;
-        try {
-            userId = getUserId();
-        } catch (Exception e) {
-            userId = 0L;
-        }
+        final Long finalUserId = userId > 0 ? userId : 0L;
 
-        // ✅ 复制为 final 变量供 lambda 使用
-        final Long finalUserId = userId;
+        log.info("【AI助手-请求】userId={}, sessionId={}, provider={}, message长度={}",
+                finalUserId, sessionId, provider, message.length());
 
         // 保存用户消息
         ConversationMessage userMsg = ConversationMessage.builder()
@@ -464,53 +462,50 @@ public class AiController extends BaseController {
         String context = historyService.buildContextPrompt(finalUserId, sessionId);
         String fullMessage = context.isEmpty() ? message : context + "\n【当前问题】\n" + message;
 
+        log.info("【AI助手-上下文】userId={}, sessionId={}, context长度={}, fullMessage长度={}",
+                finalUserId, sessionId, context.length(), fullMessage.length());
+
         // 用于累积完整回复
         StringBuilder fullResponse = new StringBuilder();
 
-        return zhipuAiClient.chatStream(PromptTemplate.ASSISTANT_SYSTEM_PROMPT, fullMessage, "glm-4-plus")
+        return aiService
+                .chatStreamWithSystem(PromptTemplate.ASSISTANT_SYSTEM_PROMPT, fullMessage, provider, finalUserId)
                 .doOnNext(chunk -> {
                     fullResponse.append(chunk);
                 })
                 .doOnComplete(() -> {
-                    // 流结束后保存 AI 完整回复
                     ConversationMessage aiMsg = ConversationMessage.builder()
                             .role("assistant")
                             .content(fullResponse.toString())
                             .build();
-                    historyService.saveMessage(finalUserId, sessionId, aiMsg); // ✅ 使用 finalUserId
-                    log.info("AI 回复已保存，长度: {}", fullResponse.length());
+                    historyService.saveMessage(finalUserId, sessionId, aiMsg);
+                    log.info("【AI助手-回复完成】userId={}, sessionId={}, 回复长度={}", finalUserId, sessionId,
+                            fullResponse.length());
                 })
                 .doOnError(error -> {
-                    log.error("流式调用失败", error);
+                    log.error("【AI助手-错误】userId={}, sessionId={}, error={}", finalUserId, sessionId, error.getMessage());
                 });
     }
 
     // AiController.java
     @GetMapping("/conversation/{sessionId}")
-    public AjaxResult getConversation(@PathVariable String sessionId) {
-        // 获取用户ID，未登录时使用默认值0
-        Long userId;
-        try {
-            userId = getUserId();
-        } catch (Exception e) {
-            userId = 0L; // 未登录用户默认ID
-        }
+    public AjaxResult getConversation(@PathVariable String sessionId, @RequestParam(defaultValue = "0") Long userId) {
+        final Long finalUserId = userId > 0 ? userId : 0L;
 
-        List<ConversationMessage> messages = historyService.getRecentMessages(userId, sessionId, 50);
+        List<ConversationMessage> messages = historyService.getRecentMessages(finalUserId, sessionId, 50);
+
+        log.info("【获取对话历史-API】userId={}, sessionId={}, 返回消息数={}", finalUserId, sessionId, messages.size());
+
         return success(messages);
     }
 
     @DeleteMapping("/conversation/{sessionId}")
-    public AjaxResult clearConversation(@PathVariable String sessionId) {
-        // 获取用户ID，未登录时使用默认值0
-        Long userId;
-        try {
-            userId = getUserId();
-        } catch (Exception e) {
-            userId = 0L; // 未登录用户默认ID
-        }
+    public AjaxResult clearConversation(@PathVariable String sessionId, @RequestParam(defaultValue = "0") Long userId) {
+        final Long finalUserId = userId > 0 ? userId : 0L;
 
-        historyService.clearHistory(userId, sessionId);
+        log.info("【清空对话-请求】userId={}, sessionId={}", finalUserId, sessionId);
+
+        historyService.clearHistory(finalUserId, sessionId);
         return success();
     }
 
@@ -521,11 +516,13 @@ public class AiController extends BaseController {
             @RequestParam(required = false) String questionType,
             @RequestParam(required = false) String options,
             @RequestParam(required = false) String correctAnswer,
-            @RequestParam(defaultValue = "zhipuai") String provider) {
+            @RequestParam(defaultValue = "zhipuai") String provider,
+            @RequestParam(defaultValue = "0") Long userId) {
+
+        final Long finalUserId = userId > 0 ? userId : 0L;
 
         log.info("题目解析请求，题型: {}, 题目: {}", questionType, question.substring(0, Math.min(50, question.length())));
 
-        // 构建用户消息
         StringBuilder userMessage = new StringBuilder();
         userMessage.append("请解析以下题目：\n\n");
         userMessage.append("【题目】").append(question).append("\n");
@@ -540,10 +537,11 @@ public class AiController extends BaseController {
             userMessage.append("【题型】").append(questionType).append("\n");
         }
 
-        return zhipuAiClient.chatStream(
+        return aiService.chatStreamWithSystem(
                 PromptTemplate.QUESTION_ANALYSIS_SYSTEM_PROMPT,
                 userMessage.toString(),
-                "glm-4-plus");
+                provider,
+                finalUserId);
     }
 
     // ==================== 请求内部类 ====================

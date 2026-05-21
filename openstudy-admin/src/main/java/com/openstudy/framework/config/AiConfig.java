@@ -44,9 +44,9 @@ public class AiConfig {
 
         // 修正：使用 setter 方式构建选项
         ZhiPuAiChatOptions options = ZhiPuAiChatOptions.builder()
-                .withModel(model)
-                .withTemperature((double) temperature.floatValue())
-                .withMaxTokens(maxTokens)
+                .model(model) // 不是 .withModel()
+                .temperature((double) temperature.floatValue()) // 不是 .withTemperature()
+                .maxTokens(maxTokens) // 不是 .withMaxTokens()
                 .build();
 
         // 创建 API 实例
@@ -80,7 +80,6 @@ public class AiConfig {
 
         return new OpenAiChatModel(openAiApi, options);
     }
-
 
     // ==================== 硅基流动配置（兼容OpenAI接口） ====================
 

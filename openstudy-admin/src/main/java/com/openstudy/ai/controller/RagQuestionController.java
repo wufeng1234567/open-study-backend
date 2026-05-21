@@ -46,11 +46,13 @@ public class RagQuestionController extends BaseController {
     @Operation(summary = "RAG 流式问答（JSON 格式）")
     @GetMapping(value = "/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> askWithStream(@RequestParam String question,
-                                       @RequestParam(required = false) Long knowledgeBaseId) {
-        log.info("收到 RAG 流式问答请求: question={}", question);
+                                       @RequestParam(required = false) Long knowledgeBaseId,
+                                       @RequestParam(defaultValue = "zhipuai") String provider,
+                                       @RequestParam(defaultValue = "0") Long userId) {
+        log.info("收到 RAG 流式问答请求: question={}, provider={}, userId={}", question, provider, userId);
 
         try {
-            return questionService.askWithStream(question, knowledgeBaseId);
+            return questionService.askWithStream(question, knowledgeBaseId, provider, userId);
         } catch (Exception e) {
             log.error("RAG 流式问答失败", e);
             return Flux.error(e);

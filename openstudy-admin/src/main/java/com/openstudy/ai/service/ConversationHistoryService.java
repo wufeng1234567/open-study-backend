@@ -18,8 +18,8 @@ public class ConversationHistoryService {
     private final AiRedisUtil redisUtil;
 
     private static final String KEY_PREFIX = "ai:conv:";
-    private static final int MAX_HISTORY_SIZE = 20;      // 最多保留20条
-    private static final int EXPIRE_MINUTES = 30;        // 30分钟过期
+    private static final int MAX_HISTORY_SIZE = 20; // 最多保留20条
+    private static final int EXPIRE_MINUTES = 30; // 30分钟过期
 
     /**
      * 保存一条对话消息
@@ -27,12 +27,14 @@ public class ConversationHistoryService {
     public void saveMessage(Long userId, String sessionId, ConversationMessage message) {
         String key = buildKey(userId, sessionId);
         message.setTimestamp(System.currentTimeMillis());
-        
+
         redisUtil.listRightPush(key, message);
-        redisUtil.listTrim(key, -MAX_HISTORY_SIZE, -1);  // 只保留最近20条
+        redisUtil.listTrim(key, -MAX_HISTORY_SIZE, -1); // 只保留最近20条
         redisUtil.expire(key, EXPIRE_MINUTES, TimeUnit.MINUTES);
-        
-        log.debug("保存对话消息: userId={}, role={}", userId, message.getRole());
+
+        log.info("【对话历史-保存】userId={}, sessionId={}, role={}, content长度={}, key={}",
+                userId, sessionId, message.getRole(),
+                message.getContent() != null ? message.getContent().length() : 0, key);
     }
 
     /**
@@ -41,13 +43,17 @@ public class ConversationHistoryService {
     public List<ConversationMessage> getRecentMessages(Long userId, String sessionId, int count) {
         String key = buildKey(userId, sessionId);
         List<Object> objects = redisUtil.listRange(key, -count, -1);
-        
+
         List<ConversationMessage> messages = new ArrayList<>();
         for (Object obj : objects) {
             if (obj instanceof ConversationMessage) {
                 messages.add((ConversationMessage) obj);
             }
         }
+
+        log.info("【对话历史-获取】userId={}, sessionId={}, 请求数量={}, 实际获取={}, key={}, objects大小={}",
+                userId, sessionId, count, messages.size(), key, objects != null ? objects.size() : 0);
+
         return messages;
     }
 
@@ -56,11 +62,12 @@ public class ConversationHistoryService {
      */
     public String buildContextPrompt(Long userId, String sessionId) {
         List<ConversationMessage> history = getRecentMessages(userId, sessionId, 10);
-        
+
         if (history.isEmpty()) {
+            log.info("【对话历史-构建上下文】userId={}, sessionId={}, 历史为空，返回空字符串", userId, sessionId);
             return "";
         }
-        
+
         StringBuilder sb = new StringBuilder();
         sb.append("【对话历史】\n");
         for (ConversationMessage msg : history) {
@@ -68,6 +75,10 @@ public class ConversationHistoryService {
             sb.append(roleName).append("：").append(msg.getContent()).append("\n");
         }
         sb.append("---\n");
+
+        log.info("【对话历史-构建上下文】userId={}, sessionId={}, 历史条数={}, 上下文长度={}",
+                userId, sessionId, history.size(), sb.length());
+
         return sb.toString();
     }
 
@@ -75,7 +86,13 @@ public class ConversationHistoryService {
      * 清空会话历史
      */
     public void clearHistory(Long userId, String sessionId) {
-        redisUtil.delete(buildKey(userId, sessionId));
+        String key = buildKey(userId, sessionId);
+        Boolean existsBefore = redisUtil.hasKey(key);
+        Boolean deleted = redisUtil.delete(key);
+        Boolean existsAfter = redisUtil.hasKey(key);
+
+        log.info("【对话历史-清空】userId={}, sessionId={}, key={}, 删除前存在={}, 删除返回值={}, 删除后存在={}",
+                userId, sessionId, key, existsBefore, deleted, existsAfter);
     }
 
     private String buildKey(Long userId, String sessionId) {
@@ -86,12 +103,14 @@ public class ConversationHistoryService {
      * 构建出题用的历史上下文（精简版）
      */
     public String buildQuestionContext(Long userId, Long bankId) {
-        if (bankId == null) return "";
+        if (bankId == null)
+            return "";
 
         String sessionId = "bank_" + bankId;
         List<ConversationMessage> history = getRecentMessages(userId, sessionId, 10);
 
-        if (history.isEmpty()) return "";
+        if (history.isEmpty())
+            return "";
 
         StringBuilder sb = new StringBuilder();
         sb.append("【出题历史上下文】\n");

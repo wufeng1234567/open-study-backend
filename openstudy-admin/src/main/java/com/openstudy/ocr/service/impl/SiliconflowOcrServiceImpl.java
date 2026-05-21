@@ -3,6 +3,7 @@ package com.openstudy.ocr.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.openstudy.ai.template.PromptTemplate;
 import com.openstudy.common.config.RuoYiConfig;
 import com.openstudy.ocr.domain.OcrResult;
 import com.openstudy.ocr.service.IOcrService;
@@ -36,6 +37,8 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
     @Value("${spring.ai.siliconflow.chat.options.model:deepseek-ai/DeepSeek-OCR}")
     private String model;
 
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 2000;
 
     @Override
     public OcrResult recognize(MultipartFile file) throws Exception {
@@ -46,8 +49,8 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         String base64Image = saveAndEncodeToBase64(file);
         log.info("图片已转为 Base64，长度: {}", base64Image.length());
 
-        // 3. 直接 HTTP 调用硅基流动 API
-        String response = callSiliconflowOcrApi(base64Image, file.getContentType());
+        // 3. 直接 HTTP 调用硅基流动 API（带重试机制）
+        String response = callSiliconflowOcrApiWithRetry(base64Image, file.getContentType());
         log.info("OCR 识别结果: {}", response);
 
         // 4. 解析 JSON 并评估质量
@@ -212,6 +215,7 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
 
         return true;
     }
+
     /**
      * 评估识别状态
      */
@@ -278,10 +282,10 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         imagePart.put("image_url", imageUrl);
         content.add(imagePart);
 
-        // 添加文本提示词 - 优化 PaddleOCR 输出格式
+        // 添加文本提示词
         JSONObject textPart = new JSONObject();
         textPart.put("type", "text");
-        textPart.put("text", "<image>\n<|grounding|>OCR this image.");
+        textPart.put("text", PromptTemplate.OCR_SYSTEM_PROMPT);
 
         content.add(textPart);
 
@@ -298,7 +302,7 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         connection.setRequestProperty("Authorization", "Bearer " + apiKey);
         connection.setDoOutput(true);
         connection.setConnectTimeout(30000);
-        connection.setReadTimeout(120000);
+        connection.setReadTimeout(600000);
 
         try (OutputStream os = connection.getOutputStream()) {
             byte[] input = requestBody.toJSONString().getBytes(StandardCharsets.UTF_8);
@@ -320,12 +324,17 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
                     log.info("{}", rawContent);
                     log.info("==========================================");
 
-                    // 先提取 <|ref|> 中的内容
-                    String extracted = extractRefContent(rawContent);
+                    // 优先尝试直接解析为 JSON（适用于 Qwen 等返回标准 JSON 的模型）
+                    String jsonResult = tryParseJson(rawContent);
+                    if (jsonResult != null) {
+                        log.info("JSON 结果（直接解析）: {}", jsonResult);
+                        return jsonResult;
+                    }
 
-                    // 尝试解析为 JSON，如果不是 JSON 则尝试转换
-                    String jsonResult = convertToJson(extracted);
-                    log.info("JSON 结果: {}", jsonResult);
+                    // 如果不是 JSON，则尝试提取 <|ref|> 格式并转换
+                    String extracted = extractRefContent(rawContent);
+                    jsonResult = convertToJson(extracted);
+                    log.info("JSON 结果（文本转换）: {}", jsonResult);
                     return jsonResult;
                 }
             }
@@ -340,6 +349,34 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
             String friendlyMessage = parseApiError(error, responseCode);
             throw new RuntimeException(friendlyMessage);
         }
+    }
+
+    /**
+     * 调用 Siliconflow API（带重试机制）
+     */
+    private String callSiliconflowOcrApiWithRetry(String base64Image, String contentType) throws Exception {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                log.info("尝试第 {} 次调用 OCR API", attempt);
+                return callSiliconflowOcrApi(base64Image, contentType);
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("第 {} 次调用失败: {}", attempt, e.getMessage());
+
+                if (attempt < MAX_RETRIES) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+
+        throw new RuntimeException("OCR API 调用失败，已重试 " + MAX_RETRIES + " 次: " + lastException.getMessage());
     }
 
     /**
@@ -382,7 +419,6 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         return "OCR 识别失败: " + error;
     }
 
-
     /**
      * 将 <|ref|> 格式的文本转换为干净的 JSON
      */
@@ -396,10 +432,26 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
 
         for (String line : lines) {
             line = line.trim();
-            if (line.isEmpty()) continue;
+            if (line.isEmpty())
+                continue;
+
+            // 跳过包含错误信息的行（如 "The text is not in English"）
+            if (line.contains("not in English") || line.contains("does not contain any text")) {
+                continue;
+            }
 
             // 跳过纯中文的续行（已经合并处理）
             if (line.matches("^[\u4e00-\u9fa5]") && !line.matches(".*[a-zA-Z].*")) {
+                continue;
+            }
+
+            // 跳过纯数字行
+            if (line.matches("^\\d+\\.?\\s*$")) {
+                continue;
+            }
+
+            // 跳过只有序号和句点的行（如 "1." "2."）
+            if (line.matches("^\\d+\\.\\s*$")) {
                 continue;
             }
 
@@ -474,12 +526,12 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         return word;
     }
 
-
     /**
      * 清理中文部分
      */
     private String cleanChineseFromRef(String text) {
-        if (text == null || text.isEmpty()) return "";
+        if (text == null || text.isEmpty())
+            return "";
 
         // 移除开头的词性标注（如 "n.礼貌" -> "礼貌"）
         text = text.replaceAll("^\\s*[nvadp]\\.?\\s*", "");
@@ -495,7 +547,8 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
      * 从 <|ref|> 格式的英文中提取干净的单词
      */
     private String cleanEnglishFromRef(String text) {
-        if (text == null || text.isEmpty()) return "";
+        if (text == null || text.isEmpty())
+            return "";
 
         // 1. 先移除音标部分（/.../）
         text = text.replaceAll("/[^/]+/", "").trim();
@@ -507,10 +560,10 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         }
 
         // 3. 清理英文中的词性标注（词性前面必须有空格）
-        text = text.replaceAll("\\s+[nvadp]+\\.?\\s*$", "");      // n., v., a., adv., adj., prep. 等
-        text = text.replaceAll("\\s+\\[.*?\\]\\s*$", "");         // [pl.] 等
-        text = text.replaceAll("\\s+modal\\s+verb\\s*$", "");     // modal verb
-        text = text.replaceAll("\\s+prep\\.?\\s*$", "");          // prep.
+        text = text.replaceAll("\\s+[nvadp]+\\.?\\s*$", ""); // n., v., a., adv., adj., prep. 等
+        text = text.replaceAll("\\s+\\[.*?\\]\\s*$", ""); // [pl.] 等
+        text = text.replaceAll("\\s+modal\\s+verb\\s*$", ""); // modal verb
+        text = text.replaceAll("\\s+prep\\.?\\s*$", ""); // prep.
 
         // 4. 移除末尾的括号内容（如 "turn up（" -> "turn up"）
         text = text.replaceAll("[（(][^）)]*$", "").trim();
@@ -520,10 +573,6 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
 
         return text.trim();
     }
-
-
-
-
 
     /**
      * 合并相邻的被拆分的词条
@@ -558,8 +607,6 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
 
         return result;
     }
-
-
 
     /**
      * 合并被错误拆分的词条（如 Sherlock Holmes 和它的中文解释）
@@ -601,15 +648,12 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         return result;
     }
 
-
-
-
-
     /**
      * 清理英文部分（分离词性标注和残留字符）
      */
     private String cleanEnglish(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
 
         // 1. 移除词性标注 (n., v., adj., adv., a., prep. 等)
         text = text.replaceAll("\\s*[nvadj]+\\.?\\s*$", "");
@@ -660,17 +704,16 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
         return english != null && !english.isEmpty() && english.length() >= 2;
     }
 
-
-
     /**
      * 修复粘连的英文词组
      * 例如: stealtheshow -> steal the show
      */
     private String fixConcatenatedWords(String text) {
-        if (text == null || text.isEmpty()) return text;
+        if (text == null || text.isEmpty())
+            return text;
 
         // 常见词组字典
-        String[] commonPhrases = {"steal the show", "give up", "take off", "look after"};
+        String[] commonPhrases = { "steal the show", "give up", "take off", "look after" };
         for (String phrase : commonPhrases) {
             String concatenated = phrase.replaceAll("\\s+", "");
             if (text.equalsIgnoreCase(concatenated)) {
@@ -684,8 +727,6 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
 
         return text;
     }
-
-
 
     /**
      * 提取 <|ref|>...</|ref|> 中的内容
@@ -714,6 +755,71 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
 
         return result.toString();
     }
+
+    /**
+     * 尝试直接将内容解析为 JSON（适用于返回标准 JSON 格式的模型）
+     * 
+     * @param content AI 返回的原始内容
+     * @return 解析后的 JSON 字符串，如果解析失败返回 null
+     */
+    private String tryParseJson(String content) {
+        if (content == null || content.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // 清理可能的 markdown 代码块标记
+            String cleaned = content.trim();
+            if (cleaned.startsWith("```")) {
+                int firstBrace = cleaned.indexOf('[');
+                int lastBrace = cleaned.lastIndexOf(']');
+                if (firstBrace >= 0 && lastBrace > firstBrace) {
+                    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+                }
+            }
+
+            // 尝试解析为 JSON 数组
+            JSONArray array = JSON.parseArray(cleaned);
+            if (array == null || array.isEmpty()) {
+                return null;
+            }
+
+            // 规范化每条记录，确保有 type 字段
+            JSONArray result = new JSONArray();
+            for (int i = 0; i < array.size(); i++) {
+                JSONObject item = array.getJSONObject(i);
+                JSONObject normalized = new JSONObject();
+
+                // 提取字段
+                String english = item.getString("english");
+                String phonetic = item.getString("phonetic");
+                String chinese = item.getString("chinese");
+                String type = item.getString("type");
+
+                // 如果没有 type 字段，根据内容自动判断
+                if (type == null || type.isEmpty()) {
+                    if (english != null && english.contains(" ")) {
+                        type = "phrase";
+                    } else {
+                        type = "word";
+                    }
+                }
+
+                normalized.put("english", english != null ? english.trim() : "");
+                normalized.put("phonetic", phonetic != null ? phonetic.trim() : "");
+                normalized.put("chinese", chinese != null ? chinese.trim() : "");
+                normalized.put("type", type);
+
+                result.add(normalized);
+            }
+
+            return result.toJSONString();
+        } catch (Exception e) {
+            log.debug("JSON 解析失败，将尝试其他方式: {}", e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * 保存文件并转为 Base64
      */
@@ -767,10 +873,14 @@ public class SiliconflowOcrServiceImpl implements IOcrService {
      */
     private String getTypeString(int type) {
         switch (type) {
-            case 1: return "word";
-            case 2: return "phrase";
-            case 3: return "sentence";
-            default: return "word";
+            case 1:
+                return "word";
+            case 2:
+                return "phrase";
+            case 3:
+                return "sentence";
+            default:
+                return "word";
         }
     }
 
