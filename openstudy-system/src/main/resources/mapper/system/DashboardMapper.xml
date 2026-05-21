@@ -21,7 +21,7 @@
 
     <!-- 查询笔记总数 -->
     <select id="selectNoteCount" resultType="int">
-        SELECT COUNT(*) FROM note WHERE status = '0'
+        SELECT COUNT(*) FROM note
     </select>
 
     <!-- 题库分类统计 -->
